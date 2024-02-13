@@ -22,6 +22,16 @@ contract SharesPool {
 
     uint256 public totalSupply;
 
+    /*
+    full node for **quarry needs to be aware of the btc blockchain**
+    that awareness has to be engineered into the **L2**
+    for now assume you have an API or feed that gives the btc state
+    make a dummy function that gives you the state
+    pool smartcontract has to be aware of BTC. on EVM chains that isn't the case
+    trivial (mandate every full Q node is running a BTC fullnode and get tip from that node)
+    make a plugin function
+    */
+
     event Transfer(
         address indexed _from,
         address indexed _to,
@@ -62,10 +72,13 @@ contract SharesPool {
     }
 
     // There is a list of these in a transaction, need to figure out what it is
+    // https://en.bitcoin.it/wiki/Transaction#Witness
     struct Witness {
 
     }
 
+    // Online Resource:
+    // https://en.bitcoin.it/wiki/Transaction
     struct Transaction {
         uint32 version;
         bytes[] flag;
@@ -77,6 +90,8 @@ contract SharesPool {
         bytes32 lockTime; 
     }
 
+    // Online Resource:
+    // https://en.bitcoin.it/wiki/Block
     struct BitcoinBlock {
         uint32 magic;
         uint32 blockSize;
@@ -109,7 +124,8 @@ contract SharesPool {
         * The previous block hash (written in the current block's block header) is the Bitcoin chain tip for the fork with the most accumulated PoW
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
-    function submitBlock(BitcoinBlock _block, address _account) public returns (bool success) {
+    // 'calldata' is used to store values during function execution. read only.
+    function submitBlock(BitcoinBlock calldata _block, address _account) public returns (bool success) {
         bytes32 blockHash = _block.header.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         if (commits[blockHash] != _account || !usedBlockHashes[blockHash])
@@ -120,6 +136,9 @@ contract SharesPool {
             return false;
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumucated PoW (TODO)
+        // chain tip is known by btc Node
+        // should be passed into function
+        bytes32 prevHash = _block.header.previousBlockHash;
 
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool (TODO)
 
@@ -164,10 +183,10 @@ contract SharesPool {
         return true;
     }
 
-    function distributeRewards(BitcoinBlock _block) public returns (bool success) {
+    function distributeRewards(BitcoinBlock calldata _block) public returns (bool success) {
         // check if there has been 6+ confirmations on the block (TODO)
 
-        Transaction coinbaseTx = _block.transactions[0];
+        Transaction calldata coinbaseTx = _block.transactions[0];
         for (uint256 i = 0; i < users.length; i++) {
             uint256 shares = balances[users[i]];
             balances[users[i]] = 0;
