@@ -130,7 +130,7 @@ contract SharesPool {
 
     // Transfers _numShares from sender to _it
     function transfer(address _to, uint256 _numShares) public returns (bool success) {
-        require(balances[msg.sender] >= _numShares);
+        require(balances[msg.sender] >= _numShares, "Do not have enough shares");
 
         balances[msg.sender] -= _numShares;
         balances[_to] += _numShares;
@@ -165,17 +165,19 @@ contract SharesPool {
     }
 
     function distributeRewards(BitcoinBlock _block) public returns (bool success) {
-        // check if there has been 6+ confirmations on the block
+        // check if there has been 6+ confirmations on the block (TODO)
+
+        Transaction coinbaseTx = _block.transactions[0];
         for (uint256 i = 0; i < users.length; i++) {
             uint256 shares = balances[users[i]];
             balances[users[i]] = 0;
             // distribute portion of rewards
-            Transaction coinbaseTx = _block.transactions[0];
 
-            // mint some synthetic BTC, amount should be equal to the amount on the block that was submitted
+            // mint some synthetic BTC, amount should be equal to the amount on the block that was submitted (TODO)
+            // need to think through some way to ultimately redeem these tokens for the BTC in the peg in address
         }
 
-        return truel
+        return true;
     }
 }
 
