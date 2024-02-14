@@ -113,6 +113,11 @@ contract SharesPool {
         return difficulty;
     }
 
+    // placeholder function to get the head of the longest fork
+    function getChainTipHash() public returns (bytes32) {
+        // dummyVal
+        return 0;
+    }
     /*
     - Keep track of which addresses have how many shares (mapping of address to number of shares)
     - Checks should be:
@@ -128,17 +133,26 @@ contract SharesPool {
     function submitBlock(BitcoinBlock calldata _block, address _account) public returns (bool success) {
         bytes32 blockHash = _block.header.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
-        if (commits[blockHash] != _account || !usedBlockHashes[blockHash])
-            return false;
+        require(
+            commits[blockHash] != _account,
+            "Address Doesn't Match account"
+        );
+
+        require(
+            !usedBlockHashes[blockHash],
+            "Block hash has already been submitted"
+        );
 
         uint256 difficulty = _calculateDifficulty(_block.header.bits);
-        if (difficulty < DIFFICULTY_THRESHOLD) // double check units match up here
-            return false;
+
+        // double check units match up here
+        require(difficulty < DIFFICULTY_THRESHOLD, "difficulty not met");
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumucated PoW (TODO)
         // chain tip is known by btc Node
         // should be passed into function
         bytes32 prevHash = _block.header.previousBlockHash;
+        require(prevHash == getChainTipHash(), "submitted block is stale");
 
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool (TODO)
 
@@ -183,7 +197,9 @@ contract SharesPool {
         return true;
     }
 
+
     function distributeRewards(BitcoinBlock calldata _block) public returns (bool success) {
+        // this is a fill in has to be done on the L2 (I think)
         // check if there has been 6+ confirmations on the block (TODO)
 
         Transaction calldata coinbaseTx = _block.transactions[0];
@@ -193,7 +209,7 @@ contract SharesPool {
             // distribute portion of rewards
 
             // mint some synthetic BTC, amount should be equal to the amount on the block that was submitted (TODO)
-            // need to think through some way to ultimately redeem these tokens for the BTC in the peg in address
+            // need to think through some way to ultimately redeem these tokens for the BTC in the peg in address (TODO)
         }
 
         return true;
