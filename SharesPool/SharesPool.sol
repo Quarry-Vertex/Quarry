@@ -9,6 +9,13 @@ contract SharesPool {
         miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
     */
 
+    address chainTipOracle;
+
+    modifier onlyOwner() {
+        require(msg.sender == chainTipOracle);
+        _;
+    }
+
     uint256 constant private DIFFICULTY_THRESHOLD = 20000000000000; // 2 * 10^13
 
     mapping(address => uint256) public balances; // tracks number of shares per user
@@ -21,6 +28,7 @@ contract SharesPool {
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
     uint256 public totalSupply;
+    bytes32 public chainTipHash;
 
     /*
     full node for **quarry needs to be aware of the btc blockchain**
@@ -33,15 +41,15 @@ contract SharesPool {
     */
 
     event Transfer(
-        address indexed _from,
-        address indexed _to,
-        uint256 _value
+        address indexed from,
+        address indexed to,
+        uint256 value
     );
 
     event Approval(
-        address indexed _owner,
-        address indexed _spender,
-        uint256 _value
+        address indexed owner,
+        address indexed spender,
+        uint256 value
     );
 
     uint32 constant magic = 0xD9B4BEF9;
@@ -100,24 +108,27 @@ contract SharesPool {
         Transaction[] transactions;
     }
 
+    constructor() public {
+        owner = msg.sender;
+    }
+
     // Submits _account to be credited for the work of _blockHash
     function submitHash(bytes32 _blockHash, address _account) public returns (bool success) {
         commits[_blockHash] = _account;
         return true;
     }
 
-    function _calculateDifficulty(uint32 bits) private pure returns (uint256) {
+    function _calculateDifficulty(uint32 _bits) private pure returns (uint256) {
         uint256 maxTarget = 0xFFFF * 256**(0x1D - 3);
-        uint256 target = (bits & 0xFFFFFF) * 256**(bits >> 24 - 3);
+        uint256 target = (_bits & 0xFFFFFF) * 256**(bits >> 24 - 3);
         uint256 difficulty = maxTarget / target;
         return difficulty;
     }
 
-    // placeholder function to get the head of the longest fork
-    function getChainTipHash() public returns (bytes32) {
-        // dummyVal
-        return 0;
+    function setChainTipHash(bytes32 _chainTipHash) public onlyOwner {
+        chainTipHash = _chainTipHash;
     }
+
     /*
     - Keep track of which addresses have how many shares (mapping of address to number of shares)
     - Checks should be:
