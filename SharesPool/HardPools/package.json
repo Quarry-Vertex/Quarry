@@ -3,5 +3,9 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "hardhat": "^2.20.1"
+  },
+  "dependencies": {
+    "bitcoin-core": "^4.1.0",
+    "typescript-language-server": "^4.3.3"
   }
 }
