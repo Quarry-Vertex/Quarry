@@ -18,8 +18,15 @@ contract SharesPool {
 
     uint256 constant private DIFFICULTY_THRESHOLD = 20000000000000; // 2 * 10^13
 
-    mapping(address => uint256) public balances; // tracks number of shares per user
-    address[] public users; // corresponding array to balances mapping, used to clear balances
+    mapping(address => uint256) public syntheticBTCBalances; // balance of each user of credited synthetic BTC, TODO: I don't think solidity supports floats? Satoshis? 
+
+    uint256 totalShares; // number of total shares, used to calculate how many rewards to distribute
+    mapping(address => uint256) public sharesBalances; // tracks number of shares per user (confirmed)
+
+    address[] public pendingUsers; // corresponding array to pending balances mapping
+    bytes32[] public pendingBlocks; // submitted blocks that are pending 6+ confirmations
+    mapping(bytes32 => uint8) public pendingBlocksConf; // submitted blocks, tracks number of confirmations
+    mapping(bytes32 => address) public pendingBlocksSubmitter; // submitted blocks, tracks who submitted them
 
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
 
@@ -27,8 +34,7 @@ contract SharesPool {
 
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
-    uint256 public totalSupply;
-    bytes32 public chainTipHash;
+    BitcoinBlock public chainTip;
 
     /*
     full node for **quarry needs to be aware of the btc blockchain**
@@ -125,8 +131,27 @@ contract SharesPool {
         return difficulty;
     }
 
-    function setChainTipHash(bytes32 _chainTipHash) public onlyOwner {
-        chainTipHash = _chainTipHash;
+    function setChainTipHash(BitcoinBlock _chainTip) public onlyOwner {
+        require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
+            "New tip previous block hash does not match current chain tip block hash");
+
+        chainTip = _chainTip;
+
+        // update all confirmations
+        for (uint256 i = 0; i < pendingBlocks.length; i++) {
+            pendingBlocksConf[pendingBlocks[i]]++;
+
+            // if it hit 6, credit the address with the share and remove the block
+            if (pendingBlocksConf[pendingBlocks[i]] >= 6) {
+                // (TODO) Need some way to removing block from pending blocks list
+                bytes32 pendingBlock = pendingBlocks[i];
+                pendingBlocks[i] = pendingBlocks[pendingBlocks.length - 1];
+                pendingBlocks.pop();
+
+                // Otherwise we will be crediting multiple shares as long as entry is >= 6
+                sharesBalances[pendingBlocksSubmitter[pendingBlock]]++;
+            }
+        }
     }
 
     /*
@@ -163,21 +188,26 @@ contract SharesPool {
         // chain tip is known by btc Node
         // should be passed into function
         bytes32 prevHash = _block.header.previousBlockHash;
-        require(prevHash == getChainTipHash(), "submitted block is stale");
+        require(prevHash == chainTipHash, "submitted block is stale");
 
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool (TODO)
 
-        balances[_account]++;
+        pendingUsers.push(_account);
+        pendingBlocks.push(blockHash);
+        pendingBlocksConf[blockHash] = 0;
+        pendingBlocksSubmitter[blockHash] = _account;
+
         usedBlockHashes[blockHash] = true;
+
         return true;
     }
 
     // Transfers _numShares from sender to _it
     function transfer(address _to, uint256 _numShares) public returns (bool success) {
-        require(balances[msg.sender] >= _numShares, "Do not have enough shares");
+        require(sharesBalances[msg.sender] >= _numShares, "Do not have enough shares");
 
-        balances[msg.sender] -= _numShares;
-        balances[_to] += _numShares;
+        sharesBalances[msg.sender] -= _numShares;
+        sharesBalances[_to] += _numShares;
 
         emit Transfer(msg.sender, _to, _numShares);
 
@@ -195,11 +225,11 @@ contract SharesPool {
 
     // Transfers _numShares from _from to _to, provided >= _numShares have been approved from the spender
     function transferFrom(address _from, address _to, uint256 _numShares) public returns (bool success) {
-        require(_numShares <= balances[_from]);
+        require(_numShares <= sharesBalances[_from]);
         require(_numShares <= allowance[_from][msg.sender]);
 
-        balances[_from] -= _numShares;
-        balances[_to] += _numShares;
+        sharesBalances[_from] -= _numShares;
+        sharesBalances[_to] += _numShares;
 
         allowance[_from][msg.sender] -= _numShares;
 
@@ -208,16 +238,15 @@ contract SharesPool {
         return true;
     }
 
-
+    // This function should be called by the oracle when rewards are won
     function distributeRewards(BitcoinBlock calldata _block) public returns (bool success) {
-        // this is a fill in has to be done on the L2 (I think)
         // check if there has been 6+ confirmations on the block (TODO)
 
         Transaction calldata coinbaseTx = _block.transactions[0];
         for (uint256 i = 0; i < users.length; i++) {
-            uint256 shares = balances[users[i]];
-            balances[users[i]] = 0;
+            sharesBalances[users[i]] = 0;
             // distribute portion of rewards
+            
 
             // mint some synthetic BTC, amount should be equal to the amount on the block that was submitted (TODO)
             // need to think through some way to ultimately redeem these tokens for the BTC in the peg in address (TODO)
@@ -258,4 +287,15 @@ distributeRewards(bitcoin block)
 
 The work verifier smart contract only has to check for SPV proofs, but it should have access to the whole block that was hashed.
 Because if the block is actually a winning Bitcoin block, we need to be able to broadcast that to the Bitcoin network.
+
+                    (submits blocks)                  (submits btc data)
+Stratum Mining Pool     -->             SharesPool          <--             Blockchain Data Oracle/Service
+
+                                            ^
+                                            |  (redeem shares)
+                                            |
+                (request peg out)
+        Miners       --->            Bridge Contract // this would need a btc address to send btc to
+
+
 */
