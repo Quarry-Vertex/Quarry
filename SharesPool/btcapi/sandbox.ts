@@ -53,6 +53,28 @@ class BlockData {
     this.weight = data.weight;
     this.tx = data.tx;
   }
+  toArray(): any[] {
+    return [
+      this.hash,              // 0 needed
+      this.confirmations,     // 1 needed
+      this.height,            // 2 needed
+      this.version,
+      this.versionHex,
+      this.merkleroot,        // 5 needed
+      this.time,
+      this.mediantime,
+      this.nonce,             // 8 needed
+      this.bits,
+      this.difficulty,
+      this.chainwork,
+      this.nTx,
+      this.previousblockhash, // 13 needed
+      this.strippedsize,
+      this.size,
+      this.weight,
+      this.tx,
+    ];
+  }
 }
 
 async function test() {
@@ -62,6 +84,7 @@ async function test() {
     const blockRaw = await client.getBlock(bh);
     const block: BlockData = new BlockData(blockRaw)
     console.log(block);
+    console.log(block.toArray());
   } catch (err) {
     console.error(err);
   }
@@ -75,32 +98,4 @@ rpcuser=cade
 rpcpassword=c
 # bottom part might not be needed
 rpcauth=cade:cf8840c50066552acc04526de1c67ed7$c10878119565f1a0ea5032e2838c66f3015a8ae6f1e1f2ab61ece7f1b3e52c50
-*/
-
-// structure of bitcoin block
-/*
-[Object: null prototype] {
-  hash: '52f2891d524907be0cb9432cf11c65a012e3c723758d5fa9882465144e32dd78',
-  confirmations: 1,
-  height: 20,
-  version: 536870912,
-  versionHex: '20000000',
-  merkleroot: '12894cc447e1aecf295319daf19d1013c8e0b46bb8375f8932273eb57f384025'
-,
-  time: 1708293047,
-  mediantime: 1708293046,
-  nonce: 1,
-  bits: '207fffff',
-  difficulty: '4.656542373906925e-10',
-  chainwork: '000000000000000000000000000000000000000000000000000000000000002a',
-  nTx: 1,
-  previousblockhash: '51bbdd192552df24e95dde13cac5cb665f4035a776b561ee3906ba7f96
-6cfbf5',
-  strippedsize: 213,
-  size: 249,
-  weight: 888,
-  tx: [
-    '12894cc447e1aecf295319daf19d1013c8e0b46bb8375f8932273eb57f384025'
-  ]
-}
 */

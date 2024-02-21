@@ -67,6 +67,28 @@ var BlockData = /** @class */ (function () {
         this.weight = data.weight;
         this.tx = data.tx;
     }
+    BlockData.prototype.toArray = function () {
+        return [
+            this.hash, // needed
+            this.confirmations, // needed
+            this.height, // needed
+            this.version,
+            this.versionHex,
+            this.merkleroot, // needed
+            this.time,
+            this.mediantime,
+            this.nonce, // needed
+            this.bits,
+            this.difficulty,
+            this.chainwork,
+            this.nTx,
+            this.previousblockhash, // needed
+            this.strippedsize,
+            this.size,
+            this.weight,
+            this.tx,
+        ];
+    };
     return BlockData;
 }());
 function test() {
@@ -85,6 +107,7 @@ function test() {
                     blockRaw = _a.sent();
                     block = new BlockData(blockRaw);
                     console.log(block);
+                    console.log(block.toArray());
                     return [3 /*break*/, 4];
                 case 3:
                     err_1 = _a.sent();

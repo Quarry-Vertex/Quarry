@@ -114,6 +114,22 @@ contract SharesPool {
         Transaction[] transactions;
     }
 
+    // handling coinbase transactions
+
+    // not sure if we should create this 'touple' type or use maps to get the right structure
+    struct AddressAmountPair {
+        address rewardee;
+        uint216 amount;
+    }
+
+    struct CoinbaseReward {
+        // pairs array
+        AddressAmountPair[] outputPairs;
+        // or mapping
+        mapping(address => uint216) outputMap;
+        string message;
+    }
+
     constructor() public {
         owner = msg.sender;
     }
@@ -188,7 +204,7 @@ contract SharesPool {
         // chain tip is known by btc Node
         // should be passed into function
         bytes32 prevHash = _block.header.previousBlockHash;
-        require(prevHash == chainTipHash, "submitted block is stale");
+        require(prevHash == chainTipHash, "submitted block is stale"); // chainTipHash doesn't exist we need to determine how to extract (TODO)
 
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool (TODO)
 
