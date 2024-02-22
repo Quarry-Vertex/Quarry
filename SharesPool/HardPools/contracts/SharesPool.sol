@@ -29,7 +29,8 @@ contract SharesPool {
 
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
 
-    mapping(address => mapping(address => uint256)) public allowance; // tracks approvals for transfering shares
+    mapping(address => mapping(address => uint256)) public allowedSharesTransfer; // tracks approvals for transfering shares
+    mapping(address => mapping(address => uint256)) public allowedBTCTransfer; // tracks approvals for transfering synthetic BTC
 
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
@@ -191,42 +192,6 @@ contract SharesPool {
         return true;
     }
 
-    // Transfers _numShares from sender to _it
-    function transfer(address _to, uint256 _numShares) public returns (bool success) {
-        require(sharesBalances[msg.sender] >= _numShares, "Do not have enough shares");
-
-        sharesBalances[msg.sender] -= _numShares;
-        sharesBalances[_to] += _numShares;
-
-        emit Transfer(msg.sender, _to, _numShares);
-
-        return true;
-    }
-
-    // Approves _numShares to be transferred from _spender's account
-    function approve(address _spender, uint256 _numShares) public returns (bool success) {
-        allowance[msg.sender][_spender] = _numShares;
-
-        emit Approval(msg.sender, _spender, _numShares);
-
-        return true;
-    }
-
-    // Transfers _numShares from _from to _to, provided >= _numShares have been approved from the spender
-    function transferFrom(address _from, address _to, uint256 _numShares) public returns (bool success) {
-        require(_numShares <= sharesBalances[_from]);
-        require(_numShares <= allowance[_from][msg.sender]);
-
-        sharesBalances[_from] -= _numShares;
-        sharesBalances[_to] += _numShares;
-
-        allowance[_from][msg.sender] -= _numShares;
-
-        emit Transfer(_from, _to, _numShares);
-
-        return true;
-    }
-
     // This function should be called by the oracle when rewards are won
     // TODO: Make sure this function is only callable by the oracle contract or would this be from the mining pool??
     // TODO: We need to add queueing logic that Allard explained using PPLNS
@@ -249,6 +214,82 @@ contract SharesPool {
 
         // clear all pending share state
         users = new address[](0);
+
+        return true;
+    }
+
+    /* Next 3 methods allow for the approval and transfer of pool shares */
+
+    // Transfers _numShares from sender to _to
+    function transferShares(address _to, uint256 _numShares) public returns (bool success) {
+        require(sharesBalances[msg.sender] >= _numShares, "Do not have enough shares");
+
+        sharesBalances[msg.sender] -= _numShares;
+        sharesBalances[_to] += _numShares;
+
+        emit Transfer(msg.sender, _to, _numShares);
+
+        return true;
+    }
+
+    // Approves _numShares to be transferred from _spender's account
+    function approveSharesTransfer(address _spender, uint256 _numShares) public returns (bool success) {
+        allowedSharesTransfer[msg.sender][_spender] = _numShares;
+
+        emit Approval(msg.sender, _spender, _numShares);
+
+        return true;
+    }
+
+    // Transfers _numShares from _from to _to, provided >= _numShares have been approved from the spender
+    function transferSharesFrom(address _from, address _to, uint256 _numShares) public returns (bool success) {
+        require(_numShares <= sharesBalances[_from]);
+        require(_numShares <= allowedSharesTransfer[_from][msg.sender]);
+
+        sharesBalances[_from] -= _numShares;
+        sharesBalances[_to] += _numShares;
+
+        allowedSharesTransfer[_from][msg.sender] -= _numShares;
+
+        emit Transfer(_from, _to, _numShares);
+
+        return true;
+    }
+
+    /* Next 3 methods allow for the approval and transfer of synthetic BTC */
+
+    // Transfers _numSats from sender to _to
+    function transferBTC(address _to, uint256 _numSats) public returns (bool success) {
+        require(syntheticBTCBalances[msg.sender] >= _numSats, "Do not have enough synthetic BTC");
+
+        syntheticBTCBalances[msg.sender] -= _numSats;
+        syntheticBTCBalances[_to] += _numSats;
+
+        emit Transfer(msg.sender, _to, _numSats);
+
+        return true;
+    }
+
+    // Approves _numSats to be transferred from _spender's account
+    function approveBTCTransfer(address _spender, uint256 _numSats) public returns (bool success) {
+        allowedBTCTransfer[msg.sender][_spender] = _numSats;
+
+        emit Approval(msg.sender, _spender, _numSats);
+
+        return true;
+    }
+
+    // Transfers _numSats from _from to _to, provided >= _numSats have been approved from the spender
+    function transferBTCFrom(address _from, address _to, uint256 _numSats) public returns (bool success) {
+        require(_numSats <= syntheticBTCBalances[_from]);
+        require(_numSats <= allowedBTCTransfer[_from][msg.sender]);
+
+        syntheticBTCBalances[_from] -= _numSats;
+        syntheticBTCBalances[_to] += _numSats;
+
+        allowedBTCTransfer[_from][msg.sender] -= _numSats;
+
+        emit Transfer(_from, _to, _numSats);
 
         return true;
     }
