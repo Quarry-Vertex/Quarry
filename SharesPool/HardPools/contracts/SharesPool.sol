@@ -18,15 +18,14 @@ contract SharesPool {
 
     uint256 constant private DIFFICULTY_THRESHOLD = 20000000000000; // 2 * 10^13
 
-    mapping(address => uint256) public syntheticBTCBalances; // balance of each user of credited synthetic BTC, TODO: I don't think solidity supports floats? Satoshis? 
+    mapping(address => uint256) public syntheticBTCBalances; // balance of each user of credited synthetic BTC
 
     uint256 totalShares; // number of total shares, used to calculate how many rewards to distribute
-    mapping(address => uint256) public sharesBalances; // tracks number of shares per user (confirmed)
+    mapping(address => uint256) public sharesBalances; // tracks number of shares per user
+    address[] users; // users with shares
 
-    address[] public pendingUsers; // corresponding array to pending balances mapping
-    bytes32[] public pendingBlocks; // submitted blocks that are pending 6+ confirmations
-    mapping(bytes32 => uint8) public pendingBlocksConf; // submitted blocks, tracks number of confirmations
-    mapping(bytes32 => address) public pendingBlocksSubmitter; // submitted blocks, tracks who submitted them
+    mapping(bytes32 => uint8) public confirmations; // tracks number of confirmations for each block hash
+    bytes32[] blocks; // list of blocks from setChainTip
 
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
 
@@ -131,29 +130,15 @@ contract SharesPool {
         return difficulty;
     }
 
-    function setChainTipHash(BitcoinBlock memory _chainTip) public onlyOwner {
+    function setChainTip(BitcoinBlock memory _chainTip) public onlyOwner {
         require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
             "New tip previous block hash does not match current chain tip block hash");
 
         chainTip = _chainTip;
-        uint32 len = pendingBlocks.length;
-        // update all confirmations
-        for (uint256 i = 0; i < len; i++) {
-            pendingBlocksConf[pendingBlocks[i]]++;
 
-            // if it hit 6, credit the address with the share and remove the block
-            if (pendingBlocksConf[pendingBlocks[i]] >= 6) {
-                bytes32 pendingBlock = pendingBlocks[i];
-                pendingBlocks[i] = pendingBlocks[pendingBlocks.length - 1];
-                pendingBlocks.pop();
-
-                sharesBalances[pendingBlocksSubmitter[pendingBlock]]++;
-
-                // since we just swapped the last element with the current one to remove
-                // we should re-look at the current one since we haven't yet
-                i--;
-                len--;
-            }
+        // increment number of confirmations for each block
+        for (uint256 i = 0; i < blocks.len; i++) {
+            confirmations[blocks[i]]++;
         }
     }
 
@@ -169,7 +154,7 @@ contract SharesPool {
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
     // 'calldata' is used to store values during function execution. read only.
-    function submitBlock(BitcoinHeader memory _blockHeader, bytes32[] memory _merklePath, address _account) public returns (bool success) {
+    function submitBlockHeader(BitcoinHeader memory _blockHeader, bytes32[] memory _merklePath, address _account) public returns (bool success) {
         bytes32 blockHash = _blockHeader.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
@@ -187,18 +172,19 @@ contract SharesPool {
         // double check units match up here
         require(difficulty < DIFFICULTY_THRESHOLD, "difficulty not met");
 
-        // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW (TODO)
-        // chain tip is known by btc Node
-        // should be passed into function
+        // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _blockHeader.previousBlockHash;
         require(prevHash == chainTip.header.merkleRootHash, "submitted block is stale");
 
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool (TODO)
 
-        pendingUsers.push(_account);
-        pendingBlocks.push(blockHash);
-        pendingBlocksConf[blockHash] = 0;
-        pendingBlocksSubmitter[blockHash] = _account;
+        // All checks pass, credit user with share
+        if (sharesBalances[_account] == 0) {
+            users.push_back(_account);
+        }
+
+        sharesBalances[_account]++;
+        totalShares++;
 
         usedBlockHashes[blockHash] = true;
 
@@ -242,18 +228,27 @@ contract SharesPool {
     }
 
     // This function should be called by the oracle when rewards are won
+    // TODO: Make sure this function is only callable by the oracle contract or would this be from the mining pool??
+    // TODO: We need to add queueing logic that Allard explained using PPLNS
     function distributeRewards(BitcoinBlock calldata _block) public returns (bool success) {
-        // check if there has been 6+ confirmations on the block (TODO)
+        // TODO: Verify that the block is a valid, won block and should probably double check that coinbase transaction points to peg in address
+        // I think this involves translating the script field of the output of the coinbase transaction in some way to get the peg in address
 
-        Transaction calldata coinbaseTx = _block.transactions[0];
+        require(confirmations[_block.header.merkleRootHash] < 6, "Does not have 6+ confirmations");
+
+        uint256 numShares = totalShares;
+        totalShares = 0;
+        uint8 blockReward = _block.transactions[0].outputs.value;
         for (uint256 i = 0; i < users.length; i++) {
+            uint256 userShares = sharesBalances[users[i]];
             sharesBalances[users[i]] = 0;
-            // distribute portion of rewards
             
-
-            // mint some synthetic BTC, amount should be equal to the amount on the block that was submitted (TODO)
-            // need to think through some way to ultimately redeem these tokens for the BTC in the peg in address (TODO)
+            // distribute portion of rewards
+            syntheticBTCBalances[users[i]] += (userShares / numShares) * blockReward;
         }
+
+        // clear all pending share state
+        users = new address[](0);
 
         return true;
     }
