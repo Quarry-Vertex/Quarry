@@ -114,22 +114,6 @@ contract SharesPool {
         Transaction[] transactions;
     }
 
-    // handling coinbase transactions
-
-    // not sure if we should create this 'touple' type or use maps to get the right structure
-    struct AddressAmountPair {
-        address rewardee;
-        uint216 amount;
-    }
-
-    struct CoinbaseReward {
-        // pairs array
-        AddressAmountPair[] outputPairs;
-        // or mapping
-        mapping(address => uint216) outputMap;
-        string message;
-    }
-
     constructor() public {
         owner = msg.sender;
     }
@@ -147,25 +131,28 @@ contract SharesPool {
         return difficulty;
     }
 
-    function setChainTipHash(BitcoinBlock _chainTip) public onlyOwner {
+    function setChainTipHash(BitcoinBlock memory _chainTip) public onlyOwner {
         require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
             "New tip previous block hash does not match current chain tip block hash");
 
         chainTip = _chainTip;
-
+        uint32 len = pendingBlocks.length;
         // update all confirmations
-        for (uint256 i = 0; i < pendingBlocks.length; i++) {
+        for (uint256 i = 0; i < len; i++) {
             pendingBlocksConf[pendingBlocks[i]]++;
 
             // if it hit 6, credit the address with the share and remove the block
             if (pendingBlocksConf[pendingBlocks[i]] >= 6) {
-                // (TODO) Need some way to removing block from pending blocks list
                 bytes32 pendingBlock = pendingBlocks[i];
                 pendingBlocks[i] = pendingBlocks[pendingBlocks.length - 1];
                 pendingBlocks.pop();
 
-                // Otherwise we will be crediting multiple shares as long as entry is >= 6
                 sharesBalances[pendingBlocksSubmitter[pendingBlock]]++;
+
+                // since we just swapped the last element with the current one to remove
+                // we should re-look at the current one since we haven't yet
+                i--;
+                len--;
             }
         }
     }
@@ -182,8 +169,8 @@ contract SharesPool {
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
     // 'calldata' is used to store values during function execution. read only.
-    function submitBlock(BitcoinBlock calldata _block, address _account) public returns (bool success) {
-        bytes32 blockHash = _block.header.merkleRootHash;
+    function submitBlock(BitcoinHeader memory _blockHeader, bytes32[] memory _merklePath, address _account) public returns (bool success) {
+        bytes32 blockHash = _blockHeader.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
             commits[blockHash] != _account,
@@ -195,16 +182,16 @@ contract SharesPool {
             "Block hash has already been submitted"
         );
 
-        uint256 difficulty = _calculateDifficulty(_block.header.bits);
+        uint256 difficulty = _calculateDifficulty(_blockHeader.bits);
 
         // double check units match up here
         require(difficulty < DIFFICULTY_THRESHOLD, "difficulty not met");
 
-        // check that previous block hash is the bitcoin chain tip for the fork with the most accumucated PoW (TODO)
+        // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW (TODO)
         // chain tip is known by btc Node
         // should be passed into function
-        bytes32 prevHash = _block.header.previousBlockHash;
-        require(prevHash == chainTipHash, "submitted block is stale"); // chainTipHash doesn't exist we need to determine how to extract (TODO)
+        bytes32 prevHash = _blockHeader.previousBlockHash;
+        require(prevHash == chainTip.header.merkleRootHash, "submitted block is stale");
 
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool (TODO)
 
@@ -280,7 +267,7 @@ submitHash(address, hash)
 someone reveals a HASH(Block hash + Destination Quarry address) first and then submits the rest of the block and the
 destination Quarry address to be credited with the pool share.
 
-submitBlock(address, block)
+submitBlock(address, block header, merkle branch)
 - Keep track of which addresses have how many shares (mapping of address to number of shares)
 - Translator proxy has to communicate to this (but other participants can as well)
 - Must reject stale shares
