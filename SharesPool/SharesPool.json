@@ -1,1 +1,0 @@
-{"errors":[{"component":"general","errorCode":"2314","formattedMessage":"ParserError: Expected identifier but got 'contract'\n --> MyContract.sol:1:6:\n  |\n1 | your contract content here\n  |      ^^^^^^^^\n\n","message":"Expected identifier but got 'contract'","severity":"error","sourceLocation":{"end":13,"file":"MyContract.sol","start":5},"type":"ParserError"}],"sources":{}}
