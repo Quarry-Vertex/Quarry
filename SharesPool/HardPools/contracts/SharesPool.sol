@@ -144,7 +144,12 @@ contract SharesPool {
             // if it hit 6, credit the address with the share and remove the block
             if (pendingBlocksConf[pendingBlocks[i]] >= 6) {
                 bytes32 pendingBlock = pendingBlocks[i];
-                pendingBlocks[i] = pendingBlocks[pendingBlocks.length - 1];
+  
+    ) public pure returns (bool) {
+        bytes32 hash = txid;
+        for (uint256 i = 0; i < proof.merklePath.length; i++) {
+            bytes32 sibling = proof.merklePath[i];
+                         pendingBlocks[i] = pendingBlocks[pendingBlocks.length - 1];
                 pendingBlocks.pop();
 
                 sharesBalances[pendingBlocksSubmitter[pendingBlock]]++;
@@ -169,7 +174,7 @@ contract SharesPool {
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
     // 'calldata' is used to store values during function execution. read only.
-    function submitBlock(BitcoinHeader memory _blockHeader, bytes32[] memory _merklePath, address _account) public returns (bool success) {
+    function submitBlock(BlockHeader memory _blockHeader, bytes32[] memory _merklePath, address _account) public returns (bool success) {
         bytes32 blockHash = _blockHeader.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
@@ -193,7 +198,32 @@ contract SharesPool {
         bytes32 prevHash = _blockHeader.previousBlockHash;
         require(prevHash == chainTip.header.merkleRootHash, "submitted block is stale");
 
-        // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool (TODO)
+        /*
+         Let's say we have the following Merkle tree for four transactions (A, B, C, D):
+
+                 ROOT <- merkle root
+                /    \
+               AB     *CD
+              /  \    /  \
+           A(tx)  B* C    D
+
+            If we want to prove that transaction A is in the Merkle tree
+            the Merkle path would be the hash of B (sibling of A) and CD (sibling of AB)
+            represented as an array: [B, CD].
+         */
+        // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool
+        bytes32 curHash = _merklePath[0]; // this is wrong, need to get the tx hash
+        for (uint2 i = 1; i < _merklePath.length; i++) { // walk the merkle path
+            // get the current hash's sibling
+            bytes32 sibling = merklePath[i];
+            // get the new current hash
+            if (curHash < sibling) {
+                curHash = keccak256(abi.encodePacked(curHash, sibling));
+            } else {
+                curHash = keccak256(abi.encodePacked(sibling, curHash));
+            }
+        }
+        require(curHash == blockHash, "spv proof failed"); // I'm not sure the blockHash is correct
 
         pendingUsers.push(_account);
         pendingBlocks.push(blockHash);

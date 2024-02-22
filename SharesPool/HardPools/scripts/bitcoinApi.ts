@@ -99,3 +99,40 @@ rpcpassword=c
 # bottom part might not be needed
 rpcauth=cade:cf8840c50066552acc04526de1c67ed7$c10878119565f1a0ea5032e2838c66f3015a8ae6f1e1f2ab61ece7f1b3e52c50
 */
+
+
+// Smart Contract interactions
+// const fs = require('fs');
+
+// connect to ETH node
+// const node_address: string = ''; // needs to be filled in
+// const web3 = new Web3(node_address);
+
+// constant files / addresses
+// const abi_file: string = ''; // needs to be filled in
+// const contractAddress: string = ''; // needs to be filled in
+// const senderAddress: string = ''; // needs to be filled in
+
+// const contractABI = JSON.parse(fs.readFileSync(abi_file, 'utf8'));
+// const contract = new web3.eth.Contract(contractABI, contractAddress);
+//----------------------------
+
+// async function smartContractInterop () {
+    // try {
+        // const longestChainHash: string = await getLongestChainHash();
+        // // pass chain into smart contract
+        // contract.methods.checkHashTip(longestChainHash)
+            // .send({ from: senderAddress })
+            // .on('receipt', (rec) => {
+                // // do something
+                // console.log(rec);
+            // })
+            // .on('error', (err) => {
+                // console.error(`Error with CheckHashTip ${err}`);
+            // });
+
+    // } catch (err) {
+        // console.error(`Error interacting with Smart Contract => ${err}`);
+        // return err
+    // }
+// }
