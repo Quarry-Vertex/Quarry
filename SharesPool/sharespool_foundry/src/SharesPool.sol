@@ -116,7 +116,7 @@ contract SharesPool {
     }
 
     constructor() public {
-        owner = msg.sender;
+        address owner = msg.sender; // assuming this is the right type
     }
 
     // Submits _account to be credited for the work of _blockHash
@@ -127,7 +127,7 @@ contract SharesPool {
 
     function _calculateDifficulty(uint32 _bits) private pure returns (uint256) {
         uint256 maxTarget = 0xFFFF * 256**(0x1D - 3);
-        uint256 target = (_bits & 0xFFFFFF) * 256**(bits >> 24 - 3);
+        uint256 target = (_bits & 0xFFFFFF) * 256**(_bits >> 24 - 3);
         uint256 difficulty = maxTarget / target;
         return difficulty;
     }
@@ -193,9 +193,9 @@ contract SharesPool {
          */
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool
         bytes32 curHash = _merklePath[0]; // this is wrong, need to get the tx hash
-        for (uint2 i = 1; i < _merklePath.length; i++) { // walk the merkle path
+        for (uint256 i = 1; i < _merklePath.length; i++) { // walk the merkle path
             // get the current hash's sibling
-            bytes32 sibling = merklePath[i];
+            bytes32 sibling = _merklePath[i];
             // get the new current hash
             if (curHash < sibling) {
                 curHash = keccak256(abi.encodePacked(curHash, sibling));
