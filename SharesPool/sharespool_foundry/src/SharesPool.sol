@@ -112,7 +112,7 @@ contract SharesPool {
         uint32 blockSize;
         BlockHeader header;
         uint256 transactionCounter;
-        Transaction[] transactions;
+        // Transaction[] transactions; // ERROR: Copying of type struct SharesPool.Transaction memory[] memory to storage not yet supported.
     }
 
     constructor() public {
@@ -139,7 +139,7 @@ contract SharesPool {
         chainTip = _chainTip;
 
         // increment number of confirmations for each block
-        for (uint256 i = 0; i < blocks.len; i++) {
+        for (uint256 i = 0; i < blocks.length; i++) {
             confirmations[blocks[i]]++;
         }
     }
@@ -207,7 +207,7 @@ contract SharesPool {
 
         // All checks pass, credit user with share
         if (sharesBalances[_account] == 0) {
-            users.push_back(_account);
+            users.push(_account);
         }
 
         sharesBalances[_account]++;
@@ -221,7 +221,7 @@ contract SharesPool {
     // This function should be called by the oracle when rewards are won
     // TODO: Make sure this function is only callable by the oracle contract or would this be from the mining pool??
     // TODO: We need to add queueing logic that Allard explained using PPLNS
-    function distributeRewards(BitcoinBlock calldata _block) public returns (bool success) {
+    function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
         // TODO: Verify that the block is a valid, won block and should probably double check that coinbase transaction points to peg in address
         // I think this involves translating the script field of the output of the coinbase transaction in some way to get the peg in address
 
@@ -229,16 +229,19 @@ contract SharesPool {
 
         uint256 numShares = totalShares;
         totalShares = 0;
-        uint8 blockReward = _block.transactions[0].outputs.value;
+        // Transaction[] memory blockTransactions = _block.transactions;
+        // bytes8 blockReward = blockTransactions[0].outputs[0].value;
+        bytes8 blockReward = 0xFFFFFFFFFFFFFFFF;
         for (uint256 i = 0; i < users.length; i++) {
             uint256 userShares = sharesBalances[users[i]];
             sharesBalances[users[i]] = 0;
             
             // distribute portion of rewards
-            syntheticBTCBalances[users[i]] += (userShares / numShares) * blockReward;
+            syntheticBTCBalances[users[i]] += (userShares / numShares) * uint64(blockReward);
         }
 
         // clear all pending share state
+        // maybe 'delete users;'
         users = new address[](0);
 
         return true;
