@@ -1,0 +1,3 @@
+[submodule "SharesPool/sharespool_foundry/lib/forge-std"]
+	path = SharesPool/sharespool_foundry/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
