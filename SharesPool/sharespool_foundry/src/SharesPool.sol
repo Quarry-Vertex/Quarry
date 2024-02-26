@@ -198,9 +198,9 @@ contract SharesPool {
             bytes32 sibling = _merklePath[i];
             // get the new current hash
             if (curHash < sibling) {
-                curHash = keccak256(abi.encodePacked(curHash, sibling));
+                curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(curHash, sibling))));
             } else {
-                curHash = keccak256(abi.encodePacked(sibling, curHash));
+                curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(sibling, curHash))));
             }
         }
         require(curHash == blockHash, "spv proof failed"); // I'm not sure the blockHash is correct
