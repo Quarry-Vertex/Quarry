@@ -77,20 +77,53 @@ class BlockData {
   }
 }
 
-async function testChainTip() {
-  try {
-    const bh = await client.getBestBlockHash();
-    console.log(bh);
-    const blockRaw = await client.getBlock(bh);
-    const block: BlockData = new BlockData(blockRaw)
-    console.log(block);
-    console.log(block.toArray());
-  } catch (err) {
-    console.error(err);
-  }
+// using local node
+// async function testChainTip() {
+  // try {
+    // const bh = await client.getBestBlockHash();
+    // console.log(bh);
+    // const blockRaw = await client.getBlock(bh);
+    // const block: BlockData = new BlockData(blockRaw)
+    // console.log(block);
+    // console.log(block.toArray());
+  // } catch (err) {
+    // console.error(err);
+  // }
+// }
+
+// using electrum servers
+const net = require('net');
+
+const HOST = 'electrum1.bluewallet.io';
+const PORT = 50001;
+
+const getChainTip = async () => {
+
+  const client = new net.Socket();
+
+  client.connect(PORT, HOST, () => {
+    console.log('Connected to server');
+
+    // Send the JSON-RPC request
+    const request = JSON.stringify({"id": 1, "method": "blockchain.headers.subscribe", "params": []});
+    client.write(request + "\r\n");
+  });
+
+  client.on('data', (data) => {
+    // Read the response
+    const response = data.toString('utf-8');
+    console.log('Response:', response);
+
+    // close the connection
+    client.end();
+  });
+
+  client.on('close', () => {
+    console.log('Connection closed');
+  });
 }
 
-testChainTip()
+getChainTip()
 
 /* ~/.bitcoin/bitcoin.conf
 regtest=1
