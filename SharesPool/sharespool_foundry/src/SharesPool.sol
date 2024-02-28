@@ -219,7 +219,7 @@ contract SharesPool {
         uint256 newShareId = shares.awardShare(_account, sharesId++);
         if (sharesQueue.isFull()) {
             uint256 burnTokenId = sharesQueue.dequeue();
-            shares.burn(burnTokenId);
+            shares.burnShare(burnTokenId);
         }
         sharesQueue.enqueue(newShareId);
 
@@ -236,13 +236,13 @@ contract SharesPool {
         uint256 numShares = sharesQueue.size();
         // Transaction[] memory blockTransactions = _block.transactions;
         // bytes8 blockReward = blockTransactions[0].outputs[0].value;
-        bytes8 blockReward = 0xFFFFFFFFFFFFFFFF; // TODO: Figure out how to pull out block reward
-        uint64 blockRewardPerShare = blockReward / numShares;
+        uint256 blockReward = 0xFFFFFFFFFFFFFFFF; // TODO: Figure out how to pull out block reward
+        uint256 blockRewardPerShare = blockReward / numShares;
         while (!sharesQueue.isEmpty()) {
-            Share burnTokenId = sharesQueue.dequeue();
-            address shareOwner = getOwnerOfShare(burnTokenId);
+            uint256 burnTokenId = sharesQueue.dequeue();
+            address shareOwner = shares.getOwnerOfShare(burnTokenId);
             syntheticBTCBalances[shareOwner] += blockRewardPerShare;
-            shares.burn(burnTokenId);
+            shares.burnShare(burnTokenId);
         }
 
         return true;

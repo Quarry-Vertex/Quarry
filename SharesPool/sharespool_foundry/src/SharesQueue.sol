@@ -17,23 +17,23 @@ contract SharesQueue {
     }
 
     // Enqueue: Add an element to the rear of the queue
-    function enqueue(uint256 memory value) public {
+    function enqueue(uint256 value) public {
         require(rear < capacity, "Queue is full");
         queue[rear] = value;
         rear++;
     }
 
     // Dequeue: Remove and return the element from the front of the queue
-    function dequeue() public returns (uint256 memory) {
+    function dequeue() public returns (uint256) {
         require(front < rear, "Queue is empty");
-        uint256 memory value = queue[front];
+        uint256 value = queue[front];
         delete queue[front];
         front++;
         return value;
     }
 
     // Get the front element without removing it
-    function peek() public view returns (uint256 memory) {
+    function peek() public view returns (uint256) {
         require(front < rear, "Queue is empty");
         return queue[front];
     }
