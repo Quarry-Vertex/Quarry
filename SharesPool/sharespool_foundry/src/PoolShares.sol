@@ -1,8 +1,12 @@
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+// import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+// import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC721, ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC721Burnable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract PoolShares is ERC721, Ownable {
+contract PoolShares is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
     string private _baseTokenURI;
 
     // Event for minting a new share
@@ -23,7 +27,7 @@ contract PoolShares is ERC721, Ownable {
         return _baseTokenURI;
     }
 
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+    function tokenURINew(uint256 tokenId) public view override returns (string memory) {
         require(_exists(tokenId), "Token does not exist");
         string memory baseURI = _baseURI();
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json")) : "";
@@ -31,7 +35,7 @@ contract PoolShares is ERC721, Ownable {
 
     function awardShare(address user, uint256 tokenId) public onlyOwner returns (uint256)
     {
-        string tokenURI = tokenURI(tokenId);
+        string tokenURI = tokenURINew(tokenId);
 
         _mint(user, tokenId);
         _setTokenURI(tokenId, tokenURI);
