@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./PoolShares.sol";
 
+// Queue to track token ids for PPLNS
 contract SharesQueue {
     uint256 private capacity;
     uint256 private front; // Front pointer

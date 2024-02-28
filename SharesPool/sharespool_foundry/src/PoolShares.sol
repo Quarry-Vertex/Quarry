@@ -27,6 +27,8 @@ contract PoolShares is ERC721, Ownable {
         return _baseTokenURI;
     }
 
+    // TODO: Figure out details of how we want to set up storing the metadata,
+    // part of this is the images, etc. but not important now
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         string memory baseURI = _baseURI();
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json")) : "";

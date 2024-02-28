@@ -2,20 +2,38 @@ pragma solidity ^0.8.13;
 
 import "./SharesQueue.sol";
 
+/*
+General Design Diagram:
+
+                    (submits blocks)                  (submits btc data)
+Stratum Mining Pool     -->             SharesPool          <--             Blockchain Data Oracle/Service
+
+                                            ^
+                                            |  (redeem shares)
+                                            |
+                (request peg out)
+        Miners       --->            Bridge Contract // this would need a btc address that can receive/send native BTC,
+                                                     // potentially same wallet as the one that receives mining rewards?
+
+*/
+
 contract SharesPool {
     address chainTipOracle;
     address quarryPegInAddress;
 
     modifier onlyOracle() {
-        require(msg.sender == chainTipOracle);
+        require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");
         _;
     }
 
-    // bitcoin_exahash = 10**18
-    // network_hash_rate_bitcoin = 500 * bitcoin_exahash  # Example: 500 Exahash/s for Bitcoin
-    // target_block_time_bitcoin = 600  # 10 minutes
-    // miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
-    // Formula: difficulty = network_hash_rate_bitcoin / (target_block_time_bitcoin * miner_hash_rate) = 2*10^13
+    /*
+        Difficulty Threshold Calculation:
+            bitcoin_exahash = 10**18
+            network_hash_rate_bitcoin = 500 * bitcoin_exahash  # Example: 500 Exahash/s for Bitcoin
+            target_block_time_bitcoin = 600  # 10 minutes
+            miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
+            Formula: difficulty = network_hash_rate_bitcoin / (target_block_time_bitcoin * miner_hash_rate) = 2*10^13
+    */
     uint256 constant private DIFFICULTY_THRESHOLD = 20000000000000; // 2 * 10^13
 
     mapping(address => uint256) public syntheticBTCBalances; // balance of each user of credited synthetic BTC
@@ -90,7 +108,8 @@ contract SharesPool {
         // TODO: need to set chainTipOracle, but not sure what this should be as this isn't a smart contract
     }
 
-    // Submits _account to be credited for the work of _blockHash
+    // To prevent work from being "stolen" (man in the middle attack) miners should reveal a HASH(Block hash + Destination
+    // Quarry address) first then submits the rest of the block and the destination Quarry address to be credited with the pool share.
     function submitHash(bytes32 _blockHash, address _account) public returns (bool success) {
         commits[_blockHash] = _account;
         return true;
@@ -107,7 +126,7 @@ contract SharesPool {
     // Is this that the coinbase transaction points to the peg in address
     function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
         require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
-            "New tip previous block hash does not match current chain tip block hash");
+            "New chain tip prev block hash does not match current chain tip block hash");
 
         chainTip = _chainTip;
 
@@ -139,7 +158,7 @@ contract SharesPool {
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
             commits[blockHash] != _account,
-            "Address Doesn't Match account"
+            "Address doesn't match account"
         );
 
         require(
@@ -150,11 +169,11 @@ contract SharesPool {
         uint256 difficulty = _calculateDifficulty(_blockHeader.bits);
 
         // double check units match up here
-        require(difficulty < DIFFICULTY_THRESHOLD, "difficulty not met");
+        require(difficulty < DIFFICULTY_THRESHOLD, "Pool difficulty not met");
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _blockHeader.previousBlockHash;
-        require(prevHash == chainTip.header.merkleRootHash, "submitted block is stale");
+        require(prevHash == chainTip.header.merkleRootHash, "Submitted block is stale");
 
         /*
          Let's say we have the following Merkle tree for four transactions (A, B, C, D):
@@ -181,7 +200,7 @@ contract SharesPool {
                 curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(sibling, curHash))));
             }
         }
-        require(curHash == blockHash, "spv proof failed");
+        require(curHash == blockHash, "SPV proof failed");
 
         usedBlockHashes[blockHash] = true;
 
@@ -242,18 +261,14 @@ contract SharesPool {
         }
     }
 
+    // Clears out all shares and distributes rewards prorata to addresses
     // This function should be called by the oracle when rewards are won
     function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
-        // TODO: Verify that the block is a valid, won block and should probably double check that coinbase transaction points to peg in address
-        // I think this involves translating the script field of the output of the coinbase transaction in some way to get the peg in address
-
-        require(confirmations[_block.header.merkleRootHash] < 6, "Does not have 6+ confirmations");
+        require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
         uint256 numShares = sharesQueue.size();
-        // Transaction[] memory blockTransactions = _block.transactions;
-        // bytes8 blockReward = blockTransactions[0].outputs[0].value;
-        uint256 blockReward = 0xFFFFFFFFFFFFFFFF; // TODO: Figure out how to pull out block reward
-        uint256 blockRewardPerShare = blockReward / numShares;
+        bytes8 blockReward = _block.outputValues[0][0];
+        uint256 blockRewardPerShare = uint64(blockReward) / numShares;
         while (!sharesQueue.isEmpty()) {
             uint256 burnTokenId = sharesQueue.dequeue();
             address shareOwner = shares.getOwnerOfShare(burnTokenId);
@@ -268,7 +283,7 @@ contract SharesPool {
 
     // Transfers _numSats from sender to _to
     function transferBTC(address _to, uint256 _numSats) public returns (bool success) {
-        require(syntheticBTCBalances[msg.sender] >= _numSats, "Do not have enough synthetic BTC");
+        require(syntheticBTCBalances[msg.sender] >= _numSats, "Do not have enough synthetic BTC in balance");
 
         syntheticBTCBalances[msg.sender] -= _numSats;
         syntheticBTCBalances[_to] += _numSats;
@@ -302,47 +317,3 @@ contract SharesPool {
         return true;
     }
 }
-
-/*
-General Design:
-
-submitHash(address, hash)
-- To prevent work from being "stolen" (man in the middle attack) we should implement a "commit-reveal" scheme in which
-someone reveals a HASH(Block hash + Destination Quarry address) first and then submits the rest of the block and the
-destination Quarry address to be credited with the pool share.
-
-submitBlock(address, block header, merkle branch)
-- Keep track of which addresses have how many shares (mapping of address to number of shares)
-- Translator proxy has to communicate to this (but other participants can as well)
-- Must reject stale shares
-- Checks should be:
-    * Address must match the one that has been committed
-    * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
-    * The block header of the submitted block meets the pool difficulty (which will be fixed - for now let's just make it represent 5 Exahash of work
-       - which means assuming the whole network is mining on Quarry there should be 100 new pool shares per second, since Bitcoin's hashrate is 500 Eh/s)
-    * The previous block hash (written in the current block's block header) is the Bitcoin chain tip for the fork with the most accumulated PoW
-    * The block hash has not been submitted to the pool before (thus all submitted block hashes should be kept in a hashmap/ set data structure on chain
-       - this hashmap can be cleared when a new Bitcoin block is found and the chain tip is updated)
-
-transferShares(addressToTransferTo, numShares)
-
-distributeRewards(bitcoin block)
-- Clears out all shares and distributes rewards prorata to addresses (make sure to delete shares before distributing
-- Probably called from the smart contract that was verifying work (if it gets a block that meets the difficulty of Bitcoin,
-  it should broadcast the block while alerting the shares tracker smart contract, after 6 confirmations)
-
-
-The work verifier smart contract only has to check for SPV proofs, but it should have access to the whole block that was hashed.
-Because if the block is actually a winning Bitcoin block, we need to be able to broadcast that to the Bitcoin network.
-
-                    (submits blocks)                  (submits btc data)
-Stratum Mining Pool     -->             SharesPool          <--             Blockchain Data Oracle/Service
-
-                                            ^
-                                            |  (redeem shares)
-                                            |
-                (request peg out)
-        Miners       --->            Bridge Contract // this would need a btc address to send btc to
-
-
-*/
