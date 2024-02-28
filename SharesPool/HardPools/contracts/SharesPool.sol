@@ -1,6 +1,6 @@
-pragma solidity ^0.8.13;
+pragma solidity >=0.6.0 <0.9.0;
 
-import "./SharesQueue.sol";
+import "./Queue.sol";
 
 contract SharesPool {
     /*
@@ -13,7 +13,7 @@ contract SharesPool {
 
     address chainTipOracle;
 
-    modifier onlyOracle() {
+    modifier onlyOwner() {
         require(msg.sender == chainTipOracle);
         _;
     }
@@ -22,10 +22,9 @@ contract SharesPool {
 
     mapping(address => uint256) public syntheticBTCBalances; // balance of each user of credited synthetic BTC
 
-    uint256 constant SHARES_QUEUE_CAPACITY = 500; // TODO: Set SharesQueue capacity to correct value
-    PoolShares shares; // Shares NFT instance
-    SharesQueue sharesQueue; // tracks the PPLNS shares to be credited if a block is found
-    uint256 sharesId = 0;
+    uint256 totalShares; // number of total shares, used to calculate how many rewards to distribute
+    mapping(address => uint256) public sharesBalances; // tracks number of shares per user
+    address[] users; // users with shares
 
     mapping(bytes32 => uint8) public confirmations; // tracks number of confirmations for each block hash
     bytes32[] blocks; // list of blocks from setChainTip
@@ -114,13 +113,11 @@ contract SharesPool {
         uint32 blockSize;
         BlockHeader header;
         uint256 transactionCounter;
-        // Transaction[] transactions; // ERROR: Copying of type struct SharesPool.Transaction memory[] memory to storage not yet supported.
+        Transaction[] transactions;
     }
 
-    constructor() {
-        sharesQueue = new SharesQueue(SHARES_QUEUE_CAPACITY);
-
-        // TODO: need to set chainTipOracle, but not sure what this should be as this isn't a smart contract
+    constructor() public {
+        owner = msg.sender;
     }
 
     // Submits _account to be credited for the work of _blockHash
@@ -131,25 +128,21 @@ contract SharesPool {
 
     function _calculateDifficulty(uint32 _bits) private pure returns (uint256) {
         uint256 maxTarget = 0xFFFF * 256**(0x1D - 3);
-        uint256 target = (_bits & 0xFFFFFF) * 256**(_bits >> 24 - 3);
+        uint256 target = (_bits & 0xFFFFFF) * 256**(bits >> 24 - 3);
         uint256 difficulty = maxTarget / target;
         return difficulty;
     }
 
-    // What do we need to submit to know what a block was won by us?
-    // Is this that the coinbase transaction points to the peg in address
-    function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
+    function setChainTip(BitcoinBlock memory _chainTip) public onlyOwner {
         require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
             "New tip previous block hash does not match current chain tip block hash");
 
         chainTip = _chainTip;
 
         // increment number of confirmations for each block
-        for (uint256 i = 0; i < blocks.length; i++) {
+        for (uint256 i = 0; i < blocks.len; i++) {
             confirmations[blocks[i]]++;
         }
-
-        // TODO: If block is won by quarry mining pool call distributeRewards
     }
 
     /*
@@ -201,49 +194,91 @@ contract SharesPool {
          */
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool
         bytes32 curHash = _merklePath[0]; // this is wrong, need to get the tx hash
-        for (uint256 i = 1; i < _merklePath.length; i++) { // walk the merkle path
+        for (uint2 i = 1; i < _merklePath.length; i++) { // walk the merkle path
             // get the current hash's sibling
-            bytes32 sibling = _merklePath[i];
+            bytes32 sibling = merklePath[i];
             // get the new current hash
             if (curHash < sibling) {
-                curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(curHash, sibling))));
+                curHash = keccak256(abi.encodePacked(curHash, sibling));
             } else {
-                curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(sibling, curHash))));
+                curHash = keccak256(abi.encodePacked(sibling, curHash));
             }
         }
-        require(curHash == blockHash, "spv proof failed");
-
-        usedBlockHashes[blockHash] = true;
+        require(curHash == blockHash, "spv proof failed"); // I'm not sure the blockHash is correct
 
         // All checks pass, credit user with share
-        uint256 newShareId = shares.awardShare(_account, sharesId++);
-        if (sharesQueue.isFull()) {
-            uint256 burnTokenId = sharesQueue.dequeue();
-            shares.burn(burnTokenId);
+        if (sharesBalances[_account] == 0) {
+            users.push_back(_account);
         }
-        sharesQueue.enqueue(newShareId);
+
+        sharesBalances[_account]++;
+        totalShares++;
+
+        usedBlockHashes[blockHash] = true;
 
         return true;
     }
 
     // This function should be called by the oracle when rewards are won
-    function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
+    // TODO: Make sure this function is only callable by the oracle contract or would this be from the mining pool??
+    // TODO: We need to add queueing logic that Allard explained using PPLNS
+    function distributeRewards(BitcoinBlock calldata _block) public returns (bool success) {
         // TODO: Verify that the block is a valid, won block and should probably double check that coinbase transaction points to peg in address
         // I think this involves translating the script field of the output of the coinbase transaction in some way to get the peg in address
 
         require(confirmations[_block.header.merkleRootHash] < 6, "Does not have 6+ confirmations");
 
-        uint256 numShares = sharesQueue.size();
-        // Transaction[] memory blockTransactions = _block.transactions;
-        // bytes8 blockReward = blockTransactions[0].outputs[0].value;
-        bytes8 blockReward = 0xFFFFFFFFFFFFFFFF; // TODO: Figure out how to pull out block reward
-        uint64 blockRewardPerShare = blockReward / numShares;
-        while (!sharesQueue.isEmpty()) {
-            Share burnTokenId = sharesQueue.dequeue();
-            address shareOwner = getOwnerOfShare(burnTokenId);
-            syntheticBTCBalances[shareOwner] += blockRewardPerShare;
-            shares.burn(burnTokenId);
+        uint256 numShares = totalShares;
+        totalShares = 0;
+        uint8 blockReward = _block.transactions[0].outputs.value;
+        for (uint256 i = 0; i < users.length; i++) {
+            uint256 userShares = sharesBalances[users[i]];
+            sharesBalances[users[i]] = 0;
+            
+            // distribute portion of rewards
+            syntheticBTCBalances[users[i]] += (userShares / numShares) * blockReward;
         }
+
+        // clear all pending share state
+        users = new address[](0);
+
+        return true;
+    }
+
+    /* Next 3 methods allow for the approval and transfer of pool shares */
+
+    // Transfers _numShares from sender to _to
+    function transferShares(address _to, uint256 _numShares) public returns (bool success) {
+        require(sharesBalances[msg.sender] >= _numShares, "Do not have enough shares");
+
+        sharesBalances[msg.sender] -= _numShares;
+        sharesBalances[_to] += _numShares;
+
+        emit Transfer(msg.sender, _to, _numShares);
+
+        return true;
+    }
+
+    // Approves _numShares to be transferred from _spender's account
+    function approveSharesTransfer(address _spender, uint256 _numShares) public returns (bool success) {
+        allowedSharesTransfer[msg.sender][_spender] = _numShares;
+
+        emit Approval(msg.sender, _spender, _numShares);
+
+        return true;
+    }
+
+    // Transfers _numShares from _from to _to, provided >= _numShares have been approved from the spender
+    function transferSharesFrom(address _from, address _to, uint256 _numShares) public returns (bool success) {
+        require(_numShares <= sharesBalances[_from]);
+        require(_numShares <= allowedSharesTransfer[_from][msg.sender]);
+
+        sharesBalances[_from] -= _numShares;
+        sharesBalances[_to] += _numShares;
+
+        allowedSharesTransfer[_from][msg.sender] -= _numShares;
+
+        emit Transfer(_from, _to, _numShares);
 
         return true;
     }
@@ -273,8 +308,8 @@ contract SharesPool {
 
     // Transfers _numSats from _from to _to, provided >= _numSats have been approved from the spender
     function transferBTCFrom(address _from, address _to, uint256 _numSats) public returns (bool success) {
-        require(_numSats <= syntheticBTCBalances[_from], "Do not have enough synthetic BTC");
-        require(_numSats <= allowedBTCTransfer[_from][msg.sender], "Not enough synthetic BTC was approved for transfer");
+        require(_numSats <= syntheticBTCBalances[_from]);
+        require(_numSats <= allowedBTCTransfer[_from][msg.sender]);
 
         syntheticBTCBalances[_from] -= _numSats;
         syntheticBTCBalances[_to] += _numSats;
