@@ -3,21 +3,19 @@ pragma solidity ^0.8.13;
 import "./SharesQueue.sol";
 
 contract SharesPool {
-    /*
-        Formula: difficulty = network_hash_rate / (target_block_time * miner_hash_rate) = 2*10^13
-        bitcoin_exahash = 10**18
-        network_hash_rate_bitcoin = 500 * bitcoin_exahash  # Example: 500 Exahash/s for Bitcoin
-        target_block_time_bitcoin = 600  # 10 minutes
-        miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
-    */
-
     address chainTipOracle;
+    address quarryPegInAddress;
 
     modifier onlyOracle() {
         require(msg.sender == chainTipOracle);
         _;
     }
 
+    // bitcoin_exahash = 10**18
+    // network_hash_rate_bitcoin = 500 * bitcoin_exahash  # Example: 500 Exahash/s for Bitcoin
+    // target_block_time_bitcoin = 600  # 10 minutes
+    // miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
+    // Formula: difficulty = network_hash_rate_bitcoin / (target_block_time_bitcoin * miner_hash_rate) = 2*10^13
     uint256 constant private DIFFICULTY_THRESHOLD = 20000000000000; // 2 * 10^13
 
     mapping(address => uint256) public syntheticBTCBalances; // balance of each user of credited synthetic BTC
@@ -38,16 +36,6 @@ contract SharesPool {
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
     BitcoinBlock public chainTip;
-
-    /*
-    full node for **quarry needs to be aware of the btc blockchain**
-    that awareness has to be engineered into the **L2**
-    for now assume you have an API or feed that gives the btc state
-    make a dummy function that gives you the state
-    pool smartcontract has to be aware of BTC. on EVM chains that isn't the case
-    trivial (mandate every full Q node is running a BTC fullnode and get tip from that node)
-    make a plugin function
-    */
 
     event Transfer(
         address indexed from,
@@ -72,54 +60,33 @@ contract SharesPool {
         uint32 nonce;
     }
 
-    // From https://en.bitcoin.it/wiki/Transaction
-
-    struct Input {
-        bytes32 outpointHash;
-        bytes4 outpointIndex;
-        bytes9 scriptLength;
-        bytes32 scriptSignature; // Information required to spend the output -- not sure what is actually is yet, need to do more research (type might be wrong)
-        bytes4 sequenceNum;
-    }
-
-    struct Output {
-        bytes8 value; // The monetary value of the output in satoshis, I believe this is the value of the rewards?
-        bytes9 scriptLength;
-        bytes32 script; // A calculation which future transactions need to solve in order to spend it -- not sure what is actually is yet, need to do more research (type might be wrong)
-    }
-
-    // There is a list of these in a transaction, need to figure out what it is
-    // https://en.bitcoin.it/wiki/Transaction#Witness
-    // struct Witness {
-
-    // }
-
-    // Online Resource:
-    // https://en.bitcoin.it/wiki/Transaction
-    struct Transaction {
-        uint32 version;
-        bytes[] flag;
-        bytes9 inputsCounter;
-        Input[] inputs;
-        bytes9 outputsCounter;
-        Output[] outputs;
-        // Witness[] witnesses;
-        bytes32 lockTime; 
-    }
-
-    // Online Resource:
-    // https://en.bitcoin.it/wiki/Block
+    // From https://en.bitcoin.it/wiki/Block + https://en.bitcoin.it/wiki/Transaction
     struct BitcoinBlock {
         uint32 magic;
         uint32 blockSize;
         BlockHeader header;
         uint256 transactionCounter;
-        // Transaction[] transactions; // ERROR: Copying of type struct SharesPool.Transaction memory[] memory to storage not yet supported.
+
+        // Flattened Transaction structure
+        uint32[] transactionVersions;
+        bytes[][] transactionFlags;
+        bytes9[] transactionInputsCounters;
+        bytes32[][] inputOutpointHashes;
+        bytes4[][] inputOutpointIndices;
+        bytes9[][] inputScriptLengths;
+        bytes32[][] inputScriptSignatures;
+        bytes4[][] inputSequenceNums;
+        bytes9[] transactionOutputsCounters;
+        bytes8[][] outputValues;
+        bytes9[][] outputScriptLengths;
+        bytes32[][] outputScripts;
+        bytes32[] transactionLockTimes;
     }
 
     constructor() {
         sharesQueue = new SharesQueue(SHARES_QUEUE_CAPACITY);
 
+        // TODO: need to set quarryPegInAddress
         // TODO: need to set chainTipOracle, but not sure what this should be as this isn't a smart contract
     }
 
@@ -149,21 +116,24 @@ contract SharesPool {
             confirmations[blocks[i]]++;
         }
 
-        // TODO: If block is won by quarry mining pool call distributeRewards
+        // If block is won by quarry mining pool (coinbase transaction points to peg in address), call distributeRewards
+        bytes25 scriptPubKey = extractScriptPubKey(_chainTip.outputScripts[0][0]);
+        address coinbaseTxAddress = scriptPubKeyToAddress(scriptPubKey);
+        if (coinbaseTxAddress == quarryPegInAddress)
+            distributeRewards(_chainTip);
     }
 
     /*
     - Keep track of which addresses have how many shares (mapping of address to number of shares)
     - Checks should be:
         * Address must match the one that has been committed
-        * The block hash has not been submitted to the pool before (thus all submitted block hashes should be kept in a hashmap/set data structure on chain 
+        * The block hash has not been submitted to the pool before (thus all submitted block hashes should be kept in a hashmap/set data structure on chain
             - this hashmap can be cleared when a new Bitcoin block is found and the chain tip is updated)
         * The block header of the submitted block meets the pool difficulty (which will be fixed - for now let's just make it represent 5 Exahash of work
             - which means assuming the whole network is mining on Quarry there should be 100 new pool shares per second, since Bitcoin's hashrate is 500 Eh/s)
         * The previous block hash (written in the current block's block header) is the Bitcoin chain tip for the fork with the most accumulated PoW
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
-    // 'calldata' is used to store values during function execution. read only.
     function submitBlockHeader(BlockHeader memory _blockHeader, bytes32[] memory _merklePath, address _account) public returns (bool success) {
         bytes32 blockHash = _blockHeader.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
@@ -224,6 +194,52 @@ contract SharesPool {
         sharesQueue.enqueue(newShareId);
 
         return true;
+    }
+
+    // This method assumes Pay-to-Script-Hash (P2SH)
+    function extractScriptPubKey(bytes32 script) public pure returns (bytes25) {
+        require(script.length == 25, "Invalid script length");
+
+        // Ensure the script follows the P2SH format
+        require(script[0] == 0xa9 && script[script.length - 1] == 0x87, "Not a P2SH script");
+
+        // Extract the scriptPubKey by removing OP_HASH160 and OP_EQUAL operations
+        bytes25 scriptPubKey;
+        assembly {
+            // Point to the free memory slot
+            let dest := add(scriptPubKey, 32)
+            // Point to the source in script
+            let src := add(script, 33)
+            // Copy 24 bytes from src to dest
+            for { let i := 0 } lt(i, 24) { i := add(i, 1) } {
+                mstore8(add(dest, i), mload(add(src, i)))
+            }
+        }
+
+        return scriptPubKey;
+    }
+
+    // This method assumes Pay-to-Script-Hash (P2SH)
+    function scriptPubKeyToAddress(bytes25 scriptPubKey) internal pure returns (address) {
+        bytes20 versionByteP2SH = hex"05"; // Version byte for P2SH addresses on mainnet
+
+        require(scriptPubKey.length >= 25, "Invalid scriptPubKey length");
+
+        if (scriptPubKey[0] == 0xa9 && scriptPubKey[scriptPubKey.length - 1] == 0x87) {
+            // Check if it's a P2SH scriptPubKey
+
+            // Extract the scriptHash
+            bytes20 scriptHash;
+            assembly {
+                scriptHash := mload(add(add(scriptPubKey, 0x21), 0))
+            }
+
+            // Create the address by concatenating version byte and script hash
+            bytes memory addressBytes = abi.encodePacked(versionByteP2SH, scriptHash);
+            return address(uint160(uint256(keccak256(addressBytes))));
+        } else {
+            revert("Not a P2SH scriptPubKey");
+        }
     }
 
     // This function should be called by the oracle when rewards are won
