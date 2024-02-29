@@ -73,8 +73,6 @@ contract SharesPool {
         uint256 value
     );
 
-    uint32 constant magic = 0xD9B4BEF9;
-
     struct ChainTip {
         bytes32 previousBlockHash;
         bytes32 merkleRootHash;
@@ -88,6 +86,8 @@ contract SharesPool {
         uint32 bits;
         uint32 nonce;
     }
+
+    uint32 constant magic = 0xD9B4BEF9;
 
     // From https://en.bitcoin.it/wiki/Block + https://en.bitcoin.it/wiki/Transaction
     struct BitcoinBlock {
