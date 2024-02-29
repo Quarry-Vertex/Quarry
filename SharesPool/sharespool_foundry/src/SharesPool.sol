@@ -18,11 +18,17 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 */
 
 contract SharesPool {
+    address stratumPool;
     address chainTipOracle;
     address quarryPegInAddress;
 
     modifier onlyOracle() {
         require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");
+        _;
+    }
+
+    modifier onlyStratumPool() {
+        require(msg.sender == stratumPool, "Only the stratumPool can call this method");
         _;
     }
 
@@ -102,6 +108,7 @@ contract SharesPool {
     }
 
     constructor() {
+        shares = new PoolShares("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
         sharesQueue = new SharesQueue(SHARES_QUEUE_CAPACITY);
         BitcoinBlock memory dummyBlock;
         dummyBlock.magic = 123; // dummy field to check if there's a real chainTip
@@ -270,8 +277,8 @@ contract SharesPool {
     }
 
     // Clears out all shares and distributes rewards prorata to addresses
-    // This function should be called by the oracle when rewards are won
-    function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
+    // This function should be called by the Stratum mining pool when blocks are won
+    function distributeRewards(BitcoinBlock memory _block) public onlyStratumPool returns (bool success) {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
         uint256 numShares = sharesQueue.size();
