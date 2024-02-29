@@ -18,11 +18,17 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 */
 
 contract SharesPool {
+    address stratumPool;
     address chainTipOracle;
     address quarryPegInAddress;
 
     modifier onlyOracle() {
         require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");
+        _;
+    }
+
+    modifier onlyStratumPool() {
+        require(msg.sender == stratumPool, "Only the stratumPool can call this method");
         _;
     }
 
@@ -44,7 +50,7 @@ contract SharesPool {
     uint256 sharesId = 0;
 
     mapping(bytes32 => uint8) public confirmations; // tracks number of confirmations for each block hash
-    bytes32[] blocks; // list of blocks from setChainTip
+    bytes32[] blocks; // list of block hashes from setChainTip
 
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
 
@@ -107,7 +113,9 @@ contract SharesPool {
     }
 
     constructor() {
+        shares = new PoolShares("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
         sharesQueue = new SharesQueue(SHARES_QUEUE_CAPACITY);
+        chainTip = ChainTip("", "");
 
         // TODO: need to set quarryPegInAddress
         // TODO: need to set chainTipOracle, but not sure what this should be as this isn't a smart contract
@@ -127,11 +135,12 @@ contract SharesPool {
         return difficulty;
     }
 
-    // What do we need to submit to know what a block was won by us?
-    // Is this that the coinbase transaction points to the peg in address
     function setChainTip(ChainTip memory _chainTip) public onlyOracle {
-        require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
-            "New chain tip prev block hash does not match current chain tip block hash");
+        // check if the merkleRoot hasn't been populated the chain tip hasn't been set
+        if (_chainTip.merkleRootHash != "") {
+            require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
+                "New chain tip prev block hash does not match current chain tip block hash");
+        }
 
         chainTip = _chainTip;
 
@@ -139,6 +148,8 @@ contract SharesPool {
         for (uint256 i = 0; i < blocks.length; i++) {
             confirmations[blocks[i]]++;
         }
+
+        blocks.push(_chainTip.merkleRootHash);
     }
 
     /*
@@ -261,8 +272,8 @@ contract SharesPool {
     }
 
     // Clears out all shares and distributes rewards prorata to addresses
-    // This function should be called by the oracle when rewards are won
-    function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
+    // This function should be called by the Stratum mining pool when blocks are won
+    function distributeRewards(BitcoinBlock memory _block) public onlyStratumPool returns (bool success) {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
         uint256 numShares = sharesQueue.size();
