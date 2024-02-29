@@ -117,8 +117,7 @@ contract SharesPool {
         sharesQueue = new SharesQueue(SHARES_QUEUE_CAPACITY);
         chainTip = ChainTip("", "");
 
-        // TODO: need to set quarryPegInAddress
-        // TODO: need to set chainTipOracle, but not sure what this should be as this isn't a smart contract
+        // TODO: need to set quarryPegInAddress, stratumPool, and chainTipOracle
     }
 
     // To prevent work from being "stolen" (man in the middle attack) miners should reveal a HASH(Block hash + Destination
