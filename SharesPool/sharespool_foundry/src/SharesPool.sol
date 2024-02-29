@@ -44,7 +44,7 @@ contract SharesPool {
     uint256 sharesId = 0;
 
     mapping(bytes32 => uint8) public confirmations; // tracks number of confirmations for each block hash
-    bytes32[] blocks; // list of blocks from setChainTip
+    bytes32[] blocks; // list of block hashes from setChainTip
 
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
 
@@ -103,6 +103,9 @@ contract SharesPool {
 
     constructor() {
         sharesQueue = new SharesQueue(SHARES_QUEUE_CAPACITY);
+        BitcoinBlock memory dummyBlock;
+        dummyBlock.magic = 123; // dummy field to check if there's a real chainTip
+        chainTip = dummyBlock;
 
         // TODO: need to set quarryPegInAddress
         // TODO: need to set chainTipOracle, but not sure what this should be as this isn't a smart contract
@@ -125,8 +128,10 @@ contract SharesPool {
     // What do we need to submit to know what a block was won by us?
     // Is this that the coinbase transaction points to the peg in address
     function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
-        require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
-            "New chain tip prev block hash does not match current chain tip block hash");
+        if (_chainTip.magic != 123) {
+            require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
+                "New chain tip prev block hash does not match current chain tip block hash");
+        }
 
         chainTip = _chainTip;
 
@@ -134,6 +139,8 @@ contract SharesPool {
         for (uint256 i = 0; i < blocks.length; i++) {
             confirmations[blocks[i]]++;
         }
+
+        blocks.push(_chainTip.header.merkleRootHash);
 
         // If block is won by quarry mining pool (coinbase transaction points to peg in address), call distributeRewards
         bytes25 scriptPubKey = extractScriptPubKey(_chainTip.outputScripts[0][0]);
