@@ -53,7 +53,7 @@ contract SharesPool {
 
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
-    BitcoinBlock public chainTip;
+    ChainTip public chainTip;
 
     event Transfer(
         address indexed from,
@@ -68,6 +68,11 @@ contract SharesPool {
     );
 
     uint32 constant magic = 0xD9B4BEF9;
+
+    struct ChainTip {
+        bytes32 previousBlockHash;
+        bytes32 merkleRootHash;
+    }
 
     struct BlockHeader {
         uint32 version;
@@ -124,8 +129,8 @@ contract SharesPool {
 
     // What do we need to submit to know what a block was won by us?
     // Is this that the coinbase transaction points to the peg in address
-    function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
-        require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
+    function setChainTip(ChainTip memory _chainTip) public onlyOracle {
+        require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
             "New chain tip prev block hash does not match current chain tip block hash");
 
         chainTip = _chainTip;
@@ -134,12 +139,6 @@ contract SharesPool {
         for (uint256 i = 0; i < blocks.length; i++) {
             confirmations[blocks[i]]++;
         }
-
-        // If block is won by quarry mining pool (coinbase transaction points to peg in address), call distributeRewards
-        bytes25 scriptPubKey = extractScriptPubKey(_chainTip.outputScripts[0][0]);
-        address coinbaseTxAddress = scriptPubKeyToAddress(scriptPubKey);
-        if (coinbaseTxAddress == quarryPegInAddress)
-            distributeRewards(_chainTip);
     }
 
     /*
@@ -173,7 +172,7 @@ contract SharesPool {
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _blockHeader.previousBlockHash;
-        require(prevHash == chainTip.header.merkleRootHash, "Submitted block is stale");
+        require(prevHash == chainTip.merkleRootHash, "Submitted block is stale");
 
         /*
          Let's say we have the following Merkle tree for four transactions (A, B, C, D):
