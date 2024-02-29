@@ -125,9 +125,10 @@ contract SharesPool {
         return difficulty;
     }
 
-    // What do we need to submit to know what a block was won by us?
-    // Is this that the coinbase transaction points to the peg in address
     function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
+        // This magic check assumes the oracle's first update will be valid, another option is to pass in the first block
+        // into the constructor but if there are missing updates in between the included block and the next oracle one
+        // then the previousBlockHash check will always fail
         if (_chainTip.magic != 123) {
             require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
                 "New chain tip prev block hash does not match current chain tip block hash");
