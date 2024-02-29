@@ -40,8 +40,8 @@ const getBestBlock = async () => {
     });
     const result = blockRes.data.result;
     return {
-      previousBlockHash: result.previousblockhash,
-      merkleRootHash: result.merkleroot,
+      previousBlockHash: '0x' + result.previousblockhash,
+      merkleRootHash: '0x' + result.merkleroot,
     };
   } catch (error) {
     console.error('Error getting block:', error.message);
@@ -59,41 +59,48 @@ const test = async () => {
   }
 }
 
-test();
+// test();
 
-// assuming localhost will need to be known when testing
-const web3 = new web3Pkg.Web3('http://localhost:7545');
+// assuming localhost will need to be known when testing (using infura goerli for testing)
+const web3 = new web3Pkg.Web3('https://goerli.infura.io/v3/531a76cd2d144d118c734b2bed4e3150');
+// get abi from forge
 const abi = require('../out/SharesPool.sol/SharesPoolAbi.json');
-const address = ''; // once deployed we will get the address
-const oracleAddress = ''; // need to either set or caclulate from SC when sending
-
+// set recieving and sending addresses
+const address = '0x2EcD1F8A8c1b4Ab15d6075010b57D68cc6cCe9bA'; // once deployed we will get the address
+const oracleAddress = '0xc9d9d042b7BB36d95457395B61FaC29D724b4E35'; // need to either set or caclulate from SC when sending
+const oraclePK = '0x' + 'bad28dc83de39b5f51a002986efd5a5222e3428e396e43261ae423659dacfc7e';
+// instantiate sharespool contract
 const sharesPoolContract = new web3.eth.Contract(abi, address);
 
+// interact with the smart contract
 const setContractTip = async (contract) => {
   try {
+    // get the chainTip
     const chainBlock = await getBestBlock();
-    const result = await contract.methods.setChainTip(chainBlock).send({
-      from: oracleAddress,
-    });
-    console.log(`Transaction Hash => ${result}`);
-  } catch (err) {
-    console.error(err);
-  }
-}
+    // interact with oracle account
+    const nonce = await web3.eth.getTransactionCount(oracleAddress);
+    // prepare transaction
+    const txData = {
+      nonce: nonce,
+      gasLimit: web3.utils.toHex(1000000),
+      gasPrice: web3.utils.toHex(web3.utils.toWei('10', 'gwei')),
+      to: address,
+      data: contract.methods.setChainTip(chainBlock).encodeABI()
+    }
+    // get the balance of the oracle (eth needed for gas)
+    const balance = await web3.eth.getBalance(oracleAddress);
+    console.log(`Balance: ${web3.utils.fromWei(balance, 'ether')} ETH`);
 
-// hash: '00000000000000095842e5e6bfcafaaa8e3e111ee8889fa4d4f37bd3a55347f6',
-// confirmations: 1,
-// height: 2579863,
-// version: 536887296,
-// versionHex: '20004000',
-// merkleroot: '762b0d43016fc6d267a147d0d66194ffebfa44430c43a211d613da88dc2df374',
-// time: 1709170959,
-// mediantime: 1709167600,
-// nonce: 3783370653,
-// bits: '1927fe18',
-// difficulty: 107392535.896636,
-// chainwork: '000000000000000000000000000000000000000000000cfab2fba695bd7c4c3a',
-// nTx: 860,
-// previousblockhash: '000000000000001ac3af6dc98cdbeab1834c4c0e70a9508ea62a15bd2938f3ab',
-// strippedsize: 99576,
-// size: 263111,
+    // sign the transaction
+    const signedTx = await web3.eth.accounts.signTransaction(txData, oraclePK);
+    console.log('---Transaction Successfully Signed---')
+    // try sending the transaction
+    const result = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+    // get successful transaction hash
+    console.log(`Transaction Hash => ${result.transactionHash}`);
+  } catch (err) {
+    console.error(`ERROR \n ${err}`);
+  }
+};
+
+setContractTip(sharesPoolContract);

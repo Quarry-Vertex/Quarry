@@ -19,7 +19,7 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 
 contract SharesPool {
     address stratumPool;
-    address chainTipOracle;
+    address chainTipOracle = address(bytes20(bytes32(uint256(keccak256(abi.encodePacked("0xc9d9d042b7BB36d95457395B61FaC29D724b4E35"))))));
     address quarryPegInAddress;
 
     modifier onlyOracle() {
