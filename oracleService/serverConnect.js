@@ -49,22 +49,22 @@ const getBestBlock = async () => {
   }
 }
 
-const test = async () => {
-  try {
-    const tipBlock = await getBestBlock();
-    console.log(Object.keys(tipBlock));
-    console.log('Block Data:', tipBlock);
-  } catch (error) {
-    console.error('Test error:', error.message);
-  }
-}
+// const test = async () => {
+//   try {
+//     const tipBlock = await getBestBlock();
+//     console.log(Object.keys(tipBlock));
+//     console.log('Block Data:', tipBlock);
+//   } catch (error) {
+//     console.error('Test error:', error.message);
+//   }
+// }
 
 // test();
 
 // assuming localhost will need to be known when testing (using infura goerli for testing)
 const web3 = new web3Pkg.Web3('https://goerli.infura.io/v3/531a76cd2d144d118c734b2bed4e3150');
 // get abi from forge
-const abi = require('../out/SharesPool.sol/SharesPoolAbi.json');
+const abi = require('../SharesPool/sharespool_foundry/out/SharesPool.sol/SharesPoolAbi.json');
 // set recieving and sending addresses
 const address = '0x2EcD1F8A8c1b4Ab15d6075010b57D68cc6cCe9bA'; // once deployed we will get the address
 const oracleAddress = '0xc9d9d042b7BB36d95457395B61FaC29D724b4E35'; // need to either set or caclulate from SC when sending
@@ -82,7 +82,7 @@ const setContractTip = async (contract) => {
     // prepare transaction
     const txData = {
       nonce: nonce,
-      gasLimit: web3.utils.toHex(1000000),
+      gasLimit: web3.utils.toHex(22005),
       gasPrice: web3.utils.toHex(web3.utils.toWei('10', 'gwei')),
       to: address,
       data: contract.methods.setChainTip(chainBlock).encodeABI()
@@ -94,6 +94,7 @@ const setContractTip = async (contract) => {
     // sign the transaction
     const signedTx = await web3.eth.accounts.signTransaction(txData, oraclePK);
     console.log('---Transaction Successfully Signed---')
+    console.log('Transaction Signing Data:', signedTx.rawTransaction);
     // try sending the transaction
     const result = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     // get successful transaction hash
