@@ -1,0 +1,10 @@
+{
+  "rpc": "https",
+  "privkey": "0x100",
+  "contract": "",
+  "constructor": [
+    "Quarry",
+    "QRY",
+    ""
+  ]
+}
