@@ -62,13 +62,13 @@ const getBestBlock = async () => {
 // test();
 
 // assuming localhost will need to be known when testing (using infura goerli for testing)
-const web3 = new web3Pkg.Web3('https://eth-sepolia.g.alchemy.com/v2/LcYLSe1fjqMF0g_p4tWPxMIFfyWJb1jK');
+const web3 = new web3Pkg.Web3('http://localhost:8545');
 // get abi from forge
 const abi = require('../contracts/rewardContracts/out/SharesPool.sol/SharesPoolAbi.json');
 // set recieving and sending addresses
-const address = '0x6f844b60b005339703FA23c1885D85Dd4e277F60'; // once deployed we will get the address
-const oracleAddress = '0xcCaCB37A575EF02C7108d23F8579732204CB4030'; // need to either set or caclulate from SC when sending
-const oraclePK = '0x' + '6d2e414bff5bdc7dc6705eb5bcd858bf311106d4030599e8ede25d41927d0bf3';
+const address = '0x5FbDB2315678afecb367f032d93F642f64180aa3'; // once deployed we will get the address
+const oracleAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'; // need to either set or caclulate from SC when sending
+const oraclePK = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 // instantiate sharespool contract
 const sharesPoolContract = new web3.eth.Contract(abi, address);
 

@@ -1,11 +1,8 @@
-[submodule "SharesPool/sharespool_foundry/lib/forge-std"]
-	path = SharesPool/sharespool_foundry/lib/forge-std
+[submodule "contracts/rewardContracts/lib/forge-std"]
+	path = contracts/rewardContracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "SharesPool/sharespool_foundry/lib/openzeppelin-contracts"]
-	path = SharesPool/sharespool_foundry/lib/openzeppelin-contracts
-	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "lib/openzeppelin-contracts"]
-	path = lib/openzeppelin-contracts
+[submodule "contracts/rewardContracts/lib/openzeppelin-contracts"]
+	path = contracts/rewardContracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "bridgeContracts/lib/forge-std"]
 	path = bridgeContracts/lib/forge-std
