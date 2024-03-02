@@ -1,5 +1,21 @@
 #!/usr/bin/python3
 
+"""
+run.py is a utility for managing the varying components of the Quarry project.
+The project is composed of several pieces of software that have to interact
+to result in the end product, a merge mining pool for free market hash rate 
+sales.
+
+| Name          | Purpose                                                      |
+|---------------+--------------------------------------------------------------|
+| oracleService | sends current block chain information to contracts           |
+| contracts     | foundry project for managing contracts to distribute rewards |
+| stratum       | using stratumv2 to handle mining and direct hashes to        |
+
+This script allows for interacting with the varying components of the Quarry
+project from the main directory.
+"""
+
 import argparse
 import subprocess
 import os
