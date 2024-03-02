@@ -1,6 +1,8 @@
 pragma solidity ^0.8.13;
 
-import "./SharesQueue.sol";
+import "./PoolShares.sol";
+import "./QuarryBTC.sol";
+import "./SharesRingBuffer.sol";
 
 /*
 General Design Diagram:
@@ -17,9 +19,11 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 
 */
 
-contract SharesPool {
+contract SharesPool is SharesRingBuffer {
+    uint256 constant SHARES_RING_BUFFER_SIZE = 500; // TODO: Set sharesRingBuffer size to correct value
+
     address stratumPool;
-    address chainTipOracle = address(bytes20(bytes32(uint256(keccak256(abi.encodePacked("0xc9d9d042b7BB36d95457395B61FaC29D724b4E35"))))));
+    address chainTipOracle;
     address quarryPegInAddress;
 
     modifier onlyOracle() {
@@ -42,20 +46,15 @@ contract SharesPool {
     */
     uint256 constant private DIFFICULTY_THRESHOLD = 20000000000000; // 2 * 10^13
 
-    mapping(address => uint256) public syntheticBTCBalances; // balance of each user of credited synthetic BTC
-
-    uint256 constant SHARES_QUEUE_CAPACITY = 500; // TODO: Set SharesQueue capacity to correct value
     PoolShares shares; // Shares NFT instance
-    SharesQueue sharesQueue; // tracks the PPLNS shares to be credited if a block is found
     uint256 sharesId = 0;
+
+    QuarryBTC quarryBTC; // synthetic BTC
 
     mapping(bytes32 => uint8) public confirmations; // tracks number of confirmations for each block hash
     bytes32[] blocks; // list of block hashes from setChainTip
 
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
-
-    mapping(address => mapping(address => uint256)) public allowedSharesTransfer; // tracks approvals for transfering shares
-    mapping(address => mapping(address => uint256)) public allowedBTCTransfer; // tracks approvals for transfering synthetic BTC
 
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
@@ -87,44 +86,27 @@ contract SharesPool {
         uint32 nonce;
     }
 
-    uint32 constant magic = 0xD9B4BEF9;
-
     // From https://en.bitcoin.it/wiki/Block + https://en.bitcoin.it/wiki/Transaction
     struct BitcoinBlock {
-        uint32 magic;
-        uint32 blockSize;
         BlockHeader header;
-        uint256 transactionCounter;
 
-        // Flattened Transaction structure
-        uint32[] transactionVersions;
-        bytes[][] transactionFlags;
-        bytes9[] transactionInputsCounters;
-        bytes32[][] inputOutpointHashes;
-        bytes4[][] inputOutpointIndices;
-        bytes9[][] inputScriptLengths;
-        bytes32[][] inputScriptSignatures;
-        bytes4[][] inputSequenceNums;
-        bytes9[] transactionOutputsCounters;
+        // Flattened Transactions
         bytes8[][] outputValues;
-        bytes9[][] outputScriptLengths;
         bytes32[][] outputScripts;
-        bytes32[] transactionLockTimes;
     }
 
-    constructor() {
+    constructor(string memory _oracleAddress) SharesRingBuffer(SHARES_RING_BUFFER_SIZE) {
+        chainTipOracle = address(bytes20(bytes32(uint256(keccak256(abi.encodePacked(_oracleAddress))))));
         shares = new PoolShares("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
-        sharesQueue = new SharesQueue(SHARES_QUEUE_CAPACITY);
         chainTip = ChainTip("", "");
 
-        // TODO: need to set quarryPegInAddress, stratumPool, and chainTipOracle
+        // TODO: need to set quarryPegInAddress and stratumPool
     }
 
     // To prevent work from being "stolen" (man in the middle attack) miners should reveal a HASH(Block hash + Destination
     // Quarry address) first then submits the rest of the block and the destination Quarry address to be credited with the pool share.
-    function submitHash(bytes32 _blockHash, address _account) public returns (bool success) {
+    function submitHash(bytes32 _blockHash, address _account) public {
         commits[_blockHash] = _account;
-        return true;
     }
 
     function _calculateDifficulty(uint32 _bits) private pure returns (uint256) {
@@ -162,8 +144,8 @@ contract SharesPool {
         * The previous block hash (written in the current block's block header) is the Bitcoin chain tip for the fork with the most accumulated PoW
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
-    function submitBlockHeader(BlockHeader memory _blockHeader, bytes32[] memory _merklePath, address _account) public returns (bool success) {
-        bytes32 blockHash = _blockHeader.merkleRootHash;
+    function submitBlockHeader(BitcoinBlock memory _block, bytes32[] memory _merklePath, address _account) public returns (bool success) {
+        bytes32 blockHash = _block.header.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
             commits[blockHash] != _account,
@@ -175,13 +157,13 @@ contract SharesPool {
             "Block hash has already been submitted"
         );
 
-        uint256 difficulty = _calculateDifficulty(_blockHeader.bits);
+        uint256 difficulty = _calculateDifficulty(_block.header.bits);
 
         // double check units match up here
         require(difficulty < DIFFICULTY_THRESHOLD, "Pool difficulty not met");
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
-        bytes32 prevHash = _blockHeader.previousBlockHash;
+        bytes32 prevHash = _block.header.previousBlockHash;
         require(prevHash == chainTip.merkleRootHash, "Submitted block is stale");
 
         /*
@@ -198,6 +180,9 @@ contract SharesPool {
             represented as an array: [B, CD].
          */
         // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool
+        require(scriptPubKeyToAddress(extractScriptPubKey(_block.outputScripts[0][0])) == quarryPegInAddress,
+            "Coinbase transaction does not point to quarry peg in address");
+
         bytes32 curHash = _merklePath[0]; // this is wrong, need to get the tx hash
         for (uint256 i = 1; i < _merklePath.length; i++) { // walk the merkle path
             // get the current hash's sibling
@@ -215,11 +200,11 @@ contract SharesPool {
 
         // All checks pass, credit user with share
         uint256 newShareId = shares.awardShare(_account, sharesId++);
-        if (sharesQueue.isFull()) {
-            uint256 burnTokenId = sharesQueue.dequeue();
+        if (ringBufferIsFull()) {
+            uint256 burnTokenId = popFromRingBuffer();
             shares.burnShare(burnTokenId);
         }
-        sharesQueue.enqueue(newShareId);
+        pushToRingBuffer(newShareId);
 
         return true;
     }
@@ -275,53 +260,15 @@ contract SharesPool {
     function distributeRewards(BitcoinBlock memory _block) public onlyStratumPool returns (bool success) {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
-        uint256 numShares = sharesQueue.size();
+        uint256 numShares = numSharesInRingBuffer();
         bytes8 blockReward = _block.outputValues[0][0];
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
-        while (!sharesQueue.isEmpty()) {
-            uint256 burnTokenId = sharesQueue.dequeue();
+        while (ringBufferIsEmpty()) {
+            uint256 burnTokenId = popFromRingBuffer();
             address shareOwner = shares.getOwnerOfShare(burnTokenId);
-            syntheticBTCBalances[shareOwner] += blockRewardPerShare;
+            quarryBTC.mintQuarryBTC(shareOwner, blockRewardPerShare);
             shares.burnShare(burnTokenId);
         }
-
-        return true;
-    }
-
-    /* Next 3 methods allow for the approval and transfer of synthetic BTC */
-
-    // Transfers _numSats from sender to _to
-    function transferBTC(address _to, uint256 _numSats) public returns (bool success) {
-        require(syntheticBTCBalances[msg.sender] >= _numSats, "Do not have enough synthetic BTC in balance");
-
-        syntheticBTCBalances[msg.sender] -= _numSats;
-        syntheticBTCBalances[_to] += _numSats;
-
-        emit Transfer(msg.sender, _to, _numSats);
-
-        return true;
-    }
-
-    // Approves _numSats to be transferred from _spender's account
-    function approveBTCTransfer(address _spender, uint256 _numSats) public returns (bool success) {
-        allowedBTCTransfer[msg.sender][_spender] = _numSats;
-
-        emit Approval(msg.sender, _spender, _numSats);
-
-        return true;
-    }
-
-    // Transfers _numSats from _from to _to, provided >= _numSats have been approved from the spender
-    function transferBTCFrom(address _from, address _to, uint256 _numSats) public returns (bool success) {
-        require(_numSats <= syntheticBTCBalances[_from], "Do not have enough synthetic BTC");
-        require(_numSats <= allowedBTCTransfer[_from][msg.sender], "Not enough synthetic BTC was approved for transfer");
-
-        syntheticBTCBalances[_from] -= _numSats;
-        syntheticBTCBalances[_to] += _numSats;
-
-        allowedBTCTransfer[_from][msg.sender] -= _numSats;
-
-        emit Transfer(_from, _to, _numSats);
 
         return true;
     }

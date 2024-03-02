@@ -1,2 +1,1 @@
-#!/bin/bash
-forge create --rpc-url https://goerli.infura.io/v3/531a76cd2d144d118c734b2bed4e3150 --private-key 0xbad28dc83de39b5f51a002986efd5a5222e3428e396e43261ae423659dacfc7e src/PoolShares.sol:PoolShares --constructor-args "Quarry" "QRY" ""
+forge create --rpc-url https://eth-sepolia.g.alchemy.com/v2/LcYLSe1fjqMF0g_p4tWPxMIFfyWJb1jK --private-key 0x6d2e414bff5bdc7dc6705eb5bcd858bf311106d4030599e8ede25d41927d0bf3 src/PoolShares.sol:PoolShares --constructor-args "0xcCaCB37A575EF02C7108d23F8579732204CB4030" "Quarry" "QRY" ""

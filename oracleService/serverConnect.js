@@ -62,13 +62,13 @@ const getBestBlock = async () => {
 // test();
 
 // assuming localhost will need to be known when testing (using infura goerli for testing)
-const web3 = new web3Pkg.Web3('https://goerli.infura.io/v3/531a76cd2d144d118c734b2bed4e3150');
+const web3 = new web3Pkg.Web3('https://eth-sepolia.g.alchemy.com/v2/LcYLSe1fjqMF0g_p4tWPxMIFfyWJb1jK');
 // get abi from forge
 const abi = require('../SharesPool/sharespool_foundry/out/SharesPool.sol/SharesPoolAbi.json');
 // set recieving and sending addresses
-const address = '0x2EcD1F8A8c1b4Ab15d6075010b57D68cc6cCe9bA'; // once deployed we will get the address
-const oracleAddress = '0xc9d9d042b7BB36d95457395B61FaC29D724b4E35'; // need to either set or caclulate from SC when sending
-const oraclePK = '0x' + 'bad28dc83de39b5f51a002986efd5a5222e3428e396e43261ae423659dacfc7e';
+const address = '0x6f844b60b005339703FA23c1885D85Dd4e277F60'; // once deployed we will get the address
+const oracleAddress = '0xcCaCB37A575EF02C7108d23F8579732204CB4030'; // need to either set or caclulate from SC when sending
+const oraclePK = '0x' + '6d2e414bff5bdc7dc6705eb5bcd858bf311106d4030599e8ede25d41927d0bf3';
 // instantiate sharespool contract
 const sharesPoolContract = new web3.eth.Contract(abi, address);
 
@@ -82,8 +82,8 @@ const setContractTip = async (contract) => {
     // prepare transaction
     const txData = {
       nonce: nonce,
-      gasLimit: web3.utils.toHex(22005),
-      gasPrice: web3.utils.toHex(web3.utils.toWei('10', 'gwei')),
+      gasLimit: web3.utils.toHex(1000000),
+      gasPrice: web3.utils.toHex(web3.utils.toWei('10000', 'wei')),
       to: address,
       data: contract.methods.setChainTip(chainBlock).encodeABI()
     }
