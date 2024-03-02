@@ -64,7 +64,7 @@ const getBestBlock = async () => {
 // assuming localhost will need to be known when testing (using infura goerli for testing)
 const web3 = new web3Pkg.Web3('https://eth-sepolia.g.alchemy.com/v2/LcYLSe1fjqMF0g_p4tWPxMIFfyWJb1jK');
 // get abi from forge
-const abi = require('../SharesPool/sharespool_foundry/out/SharesPool.sol/SharesPoolAbi.json');
+const abi = require('../contracts/rewardContracts/out/SharesPool.sol/SharesPoolAbi.json');
 // set recieving and sending addresses
 const address = '0x6f844b60b005339703FA23c1885D85Dd4e277F60'; // once deployed we will get the address
 const oracleAddress = '0xcCaCB37A575EF02C7108d23F8579732204CB4030'; // need to either set or caclulate from SC when sending
