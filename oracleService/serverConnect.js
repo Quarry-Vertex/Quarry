@@ -99,6 +99,7 @@ const setContractTip = async (contract) => {
     const result = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     // get successful transaction hash
     console.log(`Transaction Hash => ${result.transactionHash}`);
+    console.log(result);
   } catch (err) {
     console.error(`ERROR \n ${err}`);
   }
