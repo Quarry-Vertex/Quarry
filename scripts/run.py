@@ -121,7 +121,7 @@ def main():
     forge_default_deploy = forge_subparsers.add_parser(
         "default-deploy", help="deploy smart contract based on values in run.json"
     )
-    forge_build_parser.add_argument(
+    forge_default_deploy.add_argument(
         "-c", "--contract", required=True, help="contract project to deploy"
     )
     forge_default_deploy.set_defaults(func=contract_default_deploy)
