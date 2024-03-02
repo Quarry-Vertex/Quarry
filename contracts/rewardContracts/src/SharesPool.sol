@@ -2,7 +2,10 @@ pragma solidity ^0.8.13;
 
 import "./PoolShares.sol";
 import "./QuarryBTC.sol";
-import "./SharesRingBuffer.sol";
+import "./lib/SharesRingBuffer.sol";
+import "./lib/SPVProof.sol";
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /*
 General Design Diagram:
@@ -19,7 +22,7 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 
 */
 
-contract SharesPool is SharesRingBuffer {
+contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
     uint256 constant SHARES_RING_BUFFER_SIZE = 500; // TODO: Set sharesRingBuffer size to correct value
 
     address stratumPool;
@@ -95,7 +98,10 @@ contract SharesPool is SharesRingBuffer {
         bytes32[][] outputScripts;
     }
 
-    constructor(string memory _oracleAddress) SharesRingBuffer(SHARES_RING_BUFFER_SIZE) {
+    function initialize(string memory _oracleAddress) public initializer {
+        __SharesRingBuffer_init(SHARES_RING_BUFFER_SIZE);
+        __SPVProof_init();
+
         chainTipOracle = address(bytes20(bytes32(uint256(keccak256(abi.encodePacked(_oracleAddress))))));
         shares = new PoolShares("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
         chainTip = ChainTip("", "");
@@ -166,35 +172,12 @@ contract SharesPool is SharesRingBuffer {
         bytes32 prevHash = _block.header.previousBlockHash;
         require(prevHash == chainTip.merkleRootHash, "Submitted block is stale");
 
-        /*
-         Let's say we have the following Merkle tree for four transactions (A, B, C, D):
-
-                 ROOT <- merkle root
-                /    \
-               AB     *CD
-              /  \    /  \
-           A(tx)  B* C    D
-
-            If we want to prove that transaction A is in the Merkle tree
-            the Merkle path would be the hash of B (sibling of A) and CD (sibling of AB)
-            represented as an array: [B, CD].
-         */
-        // Merkle proof that Coinbase tx is pointed to current peg in address of the mining pool
+        // Check that the Coinbase tx is pointed to current peg in address of the mining pool
         require(scriptPubKeyToAddress(extractScriptPubKey(_block.outputScripts[0][0])) == quarryPegInAddress,
             "Coinbase transaction does not point to quarry peg in address");
 
-        bytes32 curHash = _merklePath[0]; // this is wrong, need to get the tx hash
-        for (uint256 i = 1; i < _merklePath.length; i++) { // walk the merkle path
-            // get the current hash's sibling
-            bytes32 sibling = _merklePath[i];
-            // get the new current hash
-            if (curHash < sibling) {
-                curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(curHash, sibling))));
-            } else {
-                curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(sibling, curHash))));
-            }
-        }
-        require(curHash == blockHash, "SPV proof failed");
+        // SPV Proof TODO: Confirm this logic is correct
+        spvProof(_merklePath, blockHash);
 
         usedBlockHashes[blockHash] = true;
 

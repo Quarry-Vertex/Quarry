@@ -1,14 +1,15 @@
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 // Queue to track token ids for PPLNS
-contract SharesRingBuffer {
+contract SharesRingBuffer is Initializable {
     uint256 public bufferSize;   // Maximum size of the ring buffer
     uint256 public currSize;     // Current number of elements in the buffer
     uint256 public index;        // Index of the oldest element
     uint256[] public buffer;     // Array to store the elements
 
-    // Constructor to initialize the ring buffer
-    constructor(uint256 _bufferSize) {
+    function initialize(uint256 _bufferSize) public onlyInitializing {
         bufferSize = _bufferSize;
         buffer = new uint256[](bufferSize);
         currSize = 0;

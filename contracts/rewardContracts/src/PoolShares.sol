@@ -1,12 +1,10 @@
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts-upgradable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 
-contract PoolShares is ERC721, Ownable {
-    using Strings for uint256;
-
+contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
     string private _baseTokenURI;
 
     // Event for minting a new share
@@ -15,7 +13,10 @@ contract PoolShares is ERC721, Ownable {
     // Event for burning a share
     event Burned(address indexed burner, uint256 indexed tokenId);
 
-    constructor(string memory name, string memory symbol, string memory baseTokenURI) ERC721(name, symbol) Ownable(msg.sender) {
+    function initialize(string memory name, string memory symbol, string memory baseTokenURI) public initializer {
+        __ERC20_init(name, symbol);
+        __Ownable_init(msg.sender);
+
         _baseTokenURI = baseTokenURI;
     }
 
