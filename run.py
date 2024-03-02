@@ -32,9 +32,9 @@ def run_oracle(args):
 # build the smart contracts in the foundry project
 def forge_build(args):
     # move to the foundry project
-    os.chdir("SharesPool/sharespool_foundry")
+    os.chdir("contracts")
     subprocess.run(["forge", "build"])
-    os.chdir("../..")
+    os.chdir("../")
 
 
 # test a smart contract
@@ -48,7 +48,7 @@ def contract_default_deploy(args):
     with open("run.json", "r") as f:
         data = json.load(f)
     # move to the foundry project
-    os.chdir("SharesPool/sharespool_foundry")
+    os.chdir("contracts")
     # build forge command
     deploy_command = [
         "forge",
@@ -64,7 +64,7 @@ def contract_default_deploy(args):
         ["--constructor-args"] + ['"' + arg + '"' for arg in data["constructor"]]
     )
     subprocess.run(deploy_command)
-    os.chdir("../..")
+    os.chdir("../")
 
 
 # deploy the smart contract, passing in required params
