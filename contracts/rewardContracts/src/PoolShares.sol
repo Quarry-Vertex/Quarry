@@ -1,10 +1,15 @@
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts-upgradable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+
+// A pool share corresponding to 5 exahashes of work
 contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
+    using Strings for uint256;
+
     string private _baseTokenURI;
 
     // Event for minting a new share
@@ -14,7 +19,7 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
     event Burned(address indexed burner, uint256 indexed tokenId);
 
     function initialize(string memory name, string memory symbol, string memory baseTokenURI) public initializer {
-        __ERC20_init(name, symbol);
+        __ERC721_init(name, symbol);
         __Ownable_init(msg.sender);
 
         _baseTokenURI = baseTokenURI;

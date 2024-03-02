@@ -23,7 +23,17 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 */
 
 contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
-    uint256 constant SHARES_RING_BUFFER_SIZE = 500; // TODO: Set sharesRingBuffer size to correct value
+    /*
+        Difficulty Threshold Calculation:
+            bitcoin_exahash = 10**18
+            network_hash_rate_bitcoin = 500 * bitcoin_exahash  # Example: 500 Exahash/s for Bitcoin
+            target_block_time_bitcoin = 600  # 10 minutes
+            miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
+            Formula: difficulty = network_hash_rate_bitcoin / (target_block_time_bitcoin * miner_hash_rate) = 2*10^13
+    */
+    uint256 DIFFICULTY_THRESHOLD; // 2 * 10^13
+
+    uint256 SHARES_RING_BUFFER_SIZE; // TODO: Set sharesRingBuffer size to correct value
 
     address stratumPool;
     address chainTipOracle;
@@ -38,16 +48,6 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
         require(msg.sender == stratumPool, "Only the stratumPool can call this method");
         _;
     }
-
-    /*
-        Difficulty Threshold Calculation:
-            bitcoin_exahash = 10**18
-            network_hash_rate_bitcoin = 500 * bitcoin_exahash  # Example: 500 Exahash/s for Bitcoin
-            target_block_time_bitcoin = 600  # 10 minutes
-            miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
-            Formula: difficulty = network_hash_rate_bitcoin / (target_block_time_bitcoin * miner_hash_rate) = 2*10^13
-    */
-    uint256 constant private DIFFICULTY_THRESHOLD = 20000000000000; // 2 * 10^13
 
     PoolShares shares; // Shares NFT instance
     uint256 sharesId = 0;
@@ -99,12 +99,17 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
     }
 
     function initialize(string memory _oracleAddress) public initializer {
-        __SharesRingBuffer_init(SHARES_RING_BUFFER_SIZE);
-        __SPVProof_init();
+        SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
+        SPVProof.initialize();
+
+        DIFFICULTY_THRESHOLD = 20000000000000;
+        SHARES_RING_BUFFER_SIZE = 500;
 
         chainTipOracle = address(bytes20(bytes32(uint256(keccak256(abi.encodePacked(_oracleAddress))))));
-        shares = new PoolShares("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
         chainTip = ChainTip("", "");
+
+        shares.initialize("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
+        quarryBTC.initialize("QuarryBTC", "QBTC");
 
         // TODO: need to set quarryPegInAddress and stratumPool
     }
