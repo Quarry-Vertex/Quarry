@@ -74,12 +74,11 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
 
     event BlockRevealed(
         bytes32 blockHash,
-        account
+        address account
     );
 
     event RewardsDistributed(
-        bytes32 blockHash,
-        account
+        bytes32 blockHash
     );
 
     struct ChainTip {
@@ -204,7 +203,7 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
         }
         pushToRingBuffer(newShareId);
 
-        emit BlockedRevealed(_block.header.merkleRootHash, _account);
+        emit BlockRevealed(_block.header.merkleRootHash, _account);
 
         return true;
     }

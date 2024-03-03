@@ -9,12 +9,12 @@ contract SharesRingBuffer is Initializable {
     uint256 public index;        // Index of the oldest element
     uint256[] public buffer;     // Array to store the elements
 
-    Event RingBufferPush(
+    event RingBufferPush(
         uint256 value,
         uint256 position
     );
 
-    Event RingBufferPop(
+    event RingBufferPop(
         uint256 value,
         uint256 position
     );
