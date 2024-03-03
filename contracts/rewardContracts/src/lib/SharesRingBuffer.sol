@@ -9,6 +9,16 @@ contract SharesRingBuffer is Initializable {
     uint256 public index;        // Index of the oldest element
     uint256[] public buffer;     // Array to store the elements
 
+    Event RingBufferPush(
+        uint256 value,
+        uint256 position
+    );
+
+    Event RingBufferPop(
+        uint256 value,
+        uint256 position
+    );
+
     function initialize(uint256 _bufferSize) public onlyInitializing {
         bufferSize = _bufferSize;
         buffer = new uint256[](bufferSize);
@@ -25,6 +35,8 @@ contract SharesRingBuffer is Initializable {
         }
 
         buffer[index] = value;
+        emit RingBufferPush(value, index);
+
         index++;
     }
 
@@ -33,6 +45,9 @@ contract SharesRingBuffer is Initializable {
         require(currSize > 0, "Buffer is empty");
 
         uint256 value = buffer[index];
+
+        emit RingBufferPush(value, index);
+
         currSize--;
         if (index == 0) { // wraps around
             index = bufferSize - 1;

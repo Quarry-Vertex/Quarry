@@ -63,16 +63,23 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
 
     ChainTip public chainTip;
 
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 value
+    event ChainTipSet(
+        bytes32 merkleRootHash
     );
 
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
+    event HashCommitted(
+        bytes32 blockHash,
+        address account
+    );
+
+    event BlockRevealed(
+        bytes32 blockHash,
+        account
+    );
+
+    event RewardsDistributed(
+        bytes32 blockHash,
+        account
     );
 
     struct ChainTip {
@@ -118,6 +125,7 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
     // Quarry address) first then submits the rest of the block and the destination Quarry address to be credited with the pool share.
     function submitHash(bytes32 _blockHash, address _account) public {
         commits[_blockHash] = _account;
+        emit HashCommitted(_blockHash, _account);
     }
 
     function _calculateDifficulty(uint32 _bits) private pure returns (uint256) {
@@ -135,6 +143,8 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
         }
 
         chainTip = _chainTip;
+
+        emit ChainTipSet(_chainTip.merkleRootHash);
 
         // increment number of confirmations for each block
         for (uint256 i = 0; i < blocks.length; i++) {
@@ -155,7 +165,7 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
         * The previous block hash (written in the current block's block header) is the Bitcoin chain tip for the fork with the most accumulated PoW
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
-    function submitBlockHeader(BitcoinBlock memory _block, bytes32[] memory _merklePath, address _account) public returns (bool success) {
+    function submitBlock(BitcoinBlock memory _block, bytes32[] memory _merklePath, address _account) public returns (bool success) {
         bytes32 blockHash = _block.header.merkleRootHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
@@ -193,6 +203,8 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
             shares.burnShare(burnTokenId);
         }
         pushToRingBuffer(newShareId);
+
+        emit BlockedRevealed(_block.header.merkleRootHash, _account);
 
         return true;
     }
@@ -257,6 +269,8 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
             quarryBTC.mintQuarryBTC(shareOwner, blockRewardPerShare);
             shares.burnShare(burnTokenId);
         }
+
+        emit RewardsDistributed(_block.header.merkleRootHash);
 
         return true;
     }

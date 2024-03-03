@@ -11,12 +11,26 @@ contract QuarryBTC is ERC20Upgradeable, OwnableUpgradeable {
         __Ownable_init(msg.sender);
     }
 
+    event MintedQuarryBTC(
+        address indexed to,
+        uint256 amount
+    );
+
+    event BurnedQuarryBTC(
+        address indexed burner,
+        uint256 amount
+    );
+
     function mintQuarryBTC(address account, uint256 amount) public onlyOwner {
         _mint(account, amount);
+
+        emit MintedQuarryBTC(account, amount);
     }
 
     function burnQuarryBTC(uint256 amount) public onlyOwner {
         require(amount <= balanceOf(msg.sender), "Insufficient balance in address");
         _burn(msg.sender, amount);
+
+        emit BurnQuarryBTC(msg.sender, amount);
     }
 }

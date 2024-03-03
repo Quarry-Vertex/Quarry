@@ -12,11 +12,15 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
 
     string private _baseTokenURI;
 
-    // Event for minting a new share
-    event Minted(address indexed to, uint256 indexed tokenId);
+    event MintedShare(
+        address indexed to,
+        uint256 indexed tokenId
+    );
 
-    // Event for burning a share
-    event Burned(address indexed burner, uint256 indexed tokenId);
+    event BurnedShare(
+        address indexed burner,
+        uint256 indexed tokenId
+    );
 
     function initialize(string memory name, string memory symbol, string memory baseTokenURI) public initializer {
         __ERC721_init(name, symbol);
@@ -44,7 +48,7 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
     {
         _mint(user, tokenId);
 
-        emit Minted(msg.sender, tokenId);
+        emit MintedShare(user, tokenId);
 
         return tokenId;
     }
@@ -53,8 +57,7 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
         // Transfer the token to the zero address, effectively burning it
         _burn(tokenId);
 
-        // Emit the burn event
-        emit Burned(msg.sender, tokenId);
+        emit BurnedShare(msg.sender, tokenId);
     }
 
     function getOwnerOfShare(uint256 tokenId) external view returns (address) {
