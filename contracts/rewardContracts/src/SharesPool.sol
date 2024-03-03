@@ -153,6 +153,10 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
         blocks.push(_chainTip.merkleRootHash);
     }
 
+    function getChainTip() public onlyOracle view returns (ChainTip memory tip) {
+        return chainTip;
+    }
+
     /*
     - Keep track of which addresses have how many shares (mapping of address to number of shares)
     - Checks should be:
