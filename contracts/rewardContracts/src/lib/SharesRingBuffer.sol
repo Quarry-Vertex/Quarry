@@ -6,7 +6,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 contract SharesRingBuffer is Initializable {
     uint256 public bufferSize;   // Maximum size of the ring buffer
     uint256 public currSize;     // Current number of elements in the buffer
-    uint256 public index;        // Index of the oldest element
+    uint256 public start;        // Index of first element
+    uint256 public end;          // Index of last element
     uint256[] public buffer;     // Array to store the elements
 
     event RingBufferPush(
@@ -23,40 +24,32 @@ contract SharesRingBuffer is Initializable {
         bufferSize = _bufferSize;
         buffer = new uint256[](bufferSize);
         currSize = 0;
-        index = 0;
+        start = 0;
+        end = 0;
     }
 
     // Function to add an element to the buffer
     function pushToRingBuffer(uint256 value) public {
-        if (index >= bufferSize) { // wraps around
-            index = 0;
+        if (currSize == bufferSize) {
+            popFromRingBuffer();
         }
 
-        if (currSize < bufferSize) { // only increment size if buffer isn't already full
-            currSize++;
-        }
+        buffer[end] = value;
+        emit RingBufferPush(value, end);
 
-        buffer[index] = value;
-
-        emit RingBufferPush(value, index);
-
-        index++;
+        end = (end + 1) % bufferSize;
+        currSize++;
     }
 
     // Function to retrieve and remove the oldest element from the buffer
     function popFromRingBuffer() public returns (uint256) {
         require(currSize > 0, "Buffer is empty");
 
-        uint256 value = buffer[index];
+        uint256 value = buffer[start];
+        emit RingBufferPop(value, start);
 
-        emit RingBufferPop(value, index);
-
+        start = (start + 1) % bufferSize;
         currSize--;
-        if (index == 0) { // wraps around
-            index = bufferSize - 1;
-        } else {
-            index--;
-        }
 
         return value;
     }
