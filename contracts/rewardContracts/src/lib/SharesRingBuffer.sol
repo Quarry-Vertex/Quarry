@@ -28,13 +28,14 @@ contract SharesRingBuffer is Initializable {
 
     // Function to add an element to the buffer
     function pushToRingBuffer(uint256 value) public {
-        if (currSize < bufferSize) { // wraps around
+        if (currSize >= bufferSize) { // wraps around
             index = 0;
         } else { // only increment size if buffer isn't already full
             currSize++;
         }
 
         buffer[index] = value;
+
         emit RingBufferPush(value, index);
 
         index++;
