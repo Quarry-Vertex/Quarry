@@ -7,6 +7,8 @@ import "./lib/SPVProof.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import "forge-std/console.sol";
+
 /*
 General Design Diagram:
 
@@ -135,6 +137,7 @@ contract SharesPool is Initializable, SharesRingBuffer, SPVProof {
     }
 
     function setChainTip(ChainTip memory _chainTip) public onlyOracle {
+        console.log("calling setChainTip");
         // check if the merkleRoot hasn't been populated the chain tip hasn't been set
         if (_chainTip.merkleRootHash != "") {
             require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
