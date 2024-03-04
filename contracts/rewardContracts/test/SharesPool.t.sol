@@ -3,22 +3,24 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {SharesPool} from "../src/SharesPool.sol";
+import {PoolSares} from "../src/PoolShares.sol"};
+import {QuarryBTC} from"../src/QuarryBTC.sol"};
 
-// contract CounterTest is Test {
-    // Counter public counter;
+contract SharesPoolTest is Test {
+    SharesPool public sharesPool;
+    PoolShares public poolShares;
+    QuarryBTC public quarryBTC;
 
-    // function setUp() public {
-        // counter = new Counter();
-        // counter.setNumber(0);
-    // }
+    // setup contract objects for testing
+    function setUp() public {
+        sharesPool = new SharesPool();
+        poolShares = new PoolShares();
+        quarryBTC = new QuarryBTC();
 
-    // function test_Increment() public {
-        // counter.increment();
-        // assertEq(counter.number(), 1);
-    // }
-
-    // function testFuzz_SetNumber(uint256 x) public {
-        // counter.setNumber(x);
-        // assertEq(counter.number(), x);
-    // }
-// }
+        // Initialize the contracts as needed
+        // using anvil address
+        sharesPool.initialize("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+        poolShares.initialize("Quarry", "QRY", "base_uri");
+        quarryBTC.initialize("QuarryBTC", "QBTC");
+    }
+}
