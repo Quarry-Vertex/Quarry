@@ -21,7 +21,7 @@ contract SharesRingBuffer is Initializable {
         uint256 position
     );
 
-    function initialize(uint256 _bufferSize) public {// onlyInitializing {
+    function initialize(uint256 _bufferSize) public initializer {//onlyInitializing {
         bufferSize = _bufferSize;
         buffer = new uint256[](bufferSize);
         currSize = 0;

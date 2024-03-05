@@ -10,7 +10,6 @@ contract SPVProofTest is Test {
     // initialize contract object
     function setUp() public {
         spvProof = new SPVProof();
-        // spvProof.initialize();
     }
     /*
               ROOT <- merkle root

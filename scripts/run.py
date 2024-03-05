@@ -39,7 +39,13 @@ def forge_build(args):
 
 # test a smart contract
 def forge_test(args):
-    pass
+    # move to the foundry project
+    os.chdir("contracts/" + args.contract)
+    # process to get "upgradable" tests working
+    subprocess.run(["forge", "clean"]) # clean
+    subprocess.run(["forge", "build"]) # rebuild
+    subprocess.run(["forge", "test", "--ffi"]) # test with ffi
+    os.chdir("../..")
 
 
 # deploy the smart contract with presets
@@ -115,6 +121,14 @@ def main():
     forge_build_parser.set_defaults(func=forge_build)
     forge_build_parser.add_argument(
         "-c", "--contract", required=True, help="contract project to build"
+    )
+    # forge test (runs all tests)
+    forge_test_parser = forge_subparsers.add_parser(
+        "test", help="build the smart contracts"
+    )
+    forge_test_parser.set_defaults(func=forge_test)
+    forge_test_parser.add_argument(
+        "-c", "--contract", required=True, help="contract project to test"
     )
 
     # forge default deploy
