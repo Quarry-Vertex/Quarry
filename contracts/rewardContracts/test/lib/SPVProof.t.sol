@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {SPVProof} from"../src/lib/SPVProof.sol";
+import {SPVProof} from"../../src/lib/SPVProof.sol";
 
 contract SPVProofTest is Test {
     // declare contract object

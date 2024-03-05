@@ -2,7 +2,7 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {SharesRingBuffer} from"../src/lib/SharesRingBuffer.sol";
+import {SharesRingBuffer} from"../../src/lib/SharesRingBuffer.sol";
 
 contract SharesRingBufferTest is Test {
     SharesRingBuffer public ringbuf;
