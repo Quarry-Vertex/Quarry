@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -20,7 +21,7 @@ contract SharesRingBuffer is Initializable {
         uint256 position
     );
 
-    function initialize(uint256 _bufferSize) public onlyInitializing {
+    function initialize(uint256 _bufferSize) public {// onlyInitializing {
         bufferSize = _bufferSize;
         buffer = new uint256[](bufferSize);
         currSize = 0;

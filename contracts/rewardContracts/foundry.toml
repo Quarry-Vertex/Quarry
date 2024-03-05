@@ -2,5 +2,8 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+build_info = true # for upgradable
+extra_output = ["storageLayout"] # for upgradable
+
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
