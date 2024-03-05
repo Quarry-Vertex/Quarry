@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -32,5 +33,9 @@ contract QuarryBTC is ERC20Upgradeable, OwnableUpgradeable {
         _burn(msg.sender, amount);
 
         emit BurnedQuarryBTC(msg.sender, amount);
+    }
+
+    function getBalanceOf(address account) public view returns (uint256) {
+        return balanceOf(account);
     }
 }
