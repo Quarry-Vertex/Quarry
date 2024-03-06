@@ -23,11 +23,21 @@ contract PoolSharesTest is Test {
         assertTrue(poolShares.getOwnerOfShare(1) == testAddress, "Expected testAddress to be owner of tokenId 1");
     }
 
-    function test_burnPoolShares() public {
-        poolShares.awardShare(testAddress, 1);
-        assertTrue(poolShares.getOwnerOfShare(1) == testAddress, "Expected testAddress to be owner of tokenId 1");
+    // function test_burnPoolShares() public {
+    //     uint256 tokenId = poolShares.awardShare(testAddress, 2);
+    //     assertTrue(poolShares.getOwnerOfShare(tokenId) == testAddress, "Expected testAddress to be owner of tokenId 2");
 
-        // poolShares.burnShare(1);
-        // assertTrue(poolShares.getOwnerOfShare(1) != testAddress, "Expected tokenId 1 to have been burned");
-    }
+    //     poolShares.burnShare(tokenId);
+    //     assertFalse(poolShares.getOwnerOfShare(tokenId) == testAddress, "Expected tokenId 2 to have been burned");
+    // }
+
+    // function test_transferPoolShares() public {
+    //     uint256 tokenId = poolShares.awardShare(testAddress, 3);
+    //     assertTrue(poolShares.getOwnerOfShare(tokenId) == testAddress, "Expected testAddress to be owner of tokenId 3");
+
+    //     poolShares.approve(testAddress, tokenId);
+    //     poolShares.transferFrom(testAddress, address(123), tokenId);
+    //     assertFalse(poolShares.getOwnerOfShare(tokenId) == testAddress, "Expected tokenId 3 to have been transferred out of testAddress");
+    //     assertTrue(poolShares.getOwnerOfShare(tokenId) == address(123), "Expected tokenId 3 to have been transferred to address 123");
+    // }
 }
