@@ -66,7 +66,7 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
 
     ChainTip public chainTip;
 
-    SharesRingBuffer public ringbuf = new SharesRingBuffer();
+    SharesRingBuffer sharesRingBuffer;
 
     event ChainTipSet(
         bytes32 merkleRootHash
@@ -111,7 +111,7 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
 
     function initialize(string memory _oracleAddress) public initializer {
         // SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
-        ringbuf.initialize(SHARES_RING_BUFFER_SIZE);
+        sharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
         SPVProof.initialize();
 
         DIFFICULTY_THRESHOLD = 20000000000000;
@@ -164,6 +164,10 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
         return chainTip;
     }
 
+    function getOneHundred() public onlyOracle view returns (uint256) {
+        return 100;
+    }
+
     /*
     - Keep track of which addresses have how many shares (mapping of address to number of shares)
     - Checks should be:
@@ -208,11 +212,11 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
 
         // All checks pass, credit user with share
         uint256 newShareId = shares.awardShare(_account, sharesId++);
-        if (ringbuf.ringBufferIsFull()) {
-            uint256 burnTokenId = ringbuf.popFromRingBuffer();
+        if (sharesRingBuffer.ringBufferIsFull()) {
+            uint256 burnTokenId = sharesRingBuffer.popFromRingBuffer();
             shares.burnShare(burnTokenId);
         }
-        ringbuf.pushToRingBuffer(newShareId);
+        sharesRingBuffer.pushToRingBuffer(newShareId);
 
         emit BlockRevealed(_block.header.merkleRootHash, _account);
 
@@ -270,11 +274,11 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
     function distributeRewards(BitcoinBlock memory _block) public onlyStratumPool returns (bool success) {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
-        uint256 numShares = ringbuf.numSharesInRingBuffer();
+        uint256 numShares = sharesRingBuffer.numSharesInRingBuffer();
         bytes8 blockReward = _block.outputValues[0][0];
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
-        while (ringbuf.ringBufferIsEmpty()) {
-            uint256 burnTokenId = ringbuf.popFromRingBuffer();
+        while (sharesRingBuffer.ringBufferIsEmpty()) {
+            uint256 burnTokenId = sharesRingBuffer.popFromRingBuffer();
             address shareOwner = shares.getOwnerOfShare(burnTokenId);
             quarryBTC.mintQuarryBTC(shareOwner, blockRewardPerShare);
             shares.burnShare(burnTokenId);

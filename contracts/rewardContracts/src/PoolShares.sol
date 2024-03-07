@@ -47,7 +47,7 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
 
     function awardShare(address user, uint256 tokenId) public onlyOwner returns (uint256)
     {
-        _mint(user, tokenId);
+        _safeMint(user, tokenId);
 
         emit MintedShare(user, tokenId);
 
