@@ -164,7 +164,7 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
         return chainTip;
     }
 
-    function getOneHundred() public onlyOracle view returns (uint256) {
+    function getOneHundred() public view returns (uint256) {
         return 100;
     }
 

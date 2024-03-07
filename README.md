@@ -13,3 +13,6 @@ forge create --from 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://
     - this first address is the oracle address
     - the first private key is the oracle private key
         - these are values in `serverConnect.js`
+
+## tooling
+- **run.py**
