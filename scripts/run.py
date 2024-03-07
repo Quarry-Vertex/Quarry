@@ -48,6 +48,16 @@ def forge_test(args):
     os.chdir("../..")
 
 
+# generate contract ABI
+def contract_gen_abi(args):
+    # move to the foundry project
+    os.chdir(f"contracts/{args.contract}/out/{args.out}.sol")
+    # Open the output file
+    with open(f"{args.out}Abi.json", "w") as output_file:
+        # Run the jq command and redirect stdout to the output file
+        subprocess.run(["jq", ".abi", f"{args.out}.json"], stdout=output_file)
+    os.chdir("../../../../")
+
 # deploy the smart contract with presets
 def contract_default_deploy(args):
     # open the json file with default parameters
@@ -112,6 +122,18 @@ def main():
     )
     forge_subparsers = forge_parser.add_subparsers(
         title="forge_commands", dest="forge_command", required=True
+    )
+
+    # generate abi
+    abi_gen_parser = forge_subparsers.add_parser(
+        "abi", help="generate contract abi"
+    )
+    abi_gen_parser.set_defaults(func=contract_gen_abi)
+    abi_gen_parser.add_argument(
+        "-c", "--contract", required=True, help="contract project to generate"
+    )
+    abi_gen_parser.add_argument(
+        "-o", "--out", required=True, help="Specific contract ABI to generate"
     )
 
     # forge build
