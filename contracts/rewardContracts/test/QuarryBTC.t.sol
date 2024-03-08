@@ -4,8 +4,10 @@ import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {QuarryBTC} from"../src/QuarryBTC.sol";
 
+import "forge-std/console.sol";
+
 contract QuarryBTCTest is Test {
-    address testAddress = address(bytes20(bytes32(uint256(keccak256(abi.encodePacked("0x5FbDB2315678afecb367f032d93F642f64180aa3"))))));
+    address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
 
     QuarryBTC public quarryBTC;
     address proxy;
@@ -24,11 +26,33 @@ contract QuarryBTCTest is Test {
 
     }
 
-    // function test_burnQuarryBTC() public {
-    //     quarryBTC.mintQuarryBTC(address(quarryBTC), 100);
-    //     assertTrue(quarryBTC.getBalanceOf(address(quarryBTC)) == 100, "Expected 100 QBTC to be minted");
+    function test_burnQuarryBTC() public {
+        quarryBTC.mintQuarryBTC(address(this), 100);
+        assertTrue(quarryBTC.getBalanceOf(address(this)) == 100, "Expected 100 QBTC to be minted");
 
-    //     quarryBTC.burnQuarryBTC(50);
-    //     assertTrue(quarryBTC.getBalanceOf(address(quarryBTC)) == 50, "Expected 50 QBTC to be burned, leaving 50 left");
-    // }
+        vm.prank(address(this));
+        quarryBTC.burnQuarryBTC(50);
+        assertTrue(quarryBTC.getBalanceOf(address(this)) == 50, "Expected 50 QBTC to be burned, leaving 50 left");
+    }
+
+    function test_transferQuarryBTC() public {
+        quarryBTC.mintQuarryBTC(address(this), 100);
+        assertTrue(quarryBTC.getBalanceOf(address(this)) == 100, "Expected 100 QBTC to be minted");
+
+        vm.prank(address(this));
+        quarryBTC.approve(address(this), 50);
+
+        quarryBTC.transferFrom(address(this), testAddress, 50);
+        assertTrue(quarryBTC.getBalanceOf(address(this)) == 50, "Expected 50 QBTC to be transferred, leaving 50 left");
+        assertTrue(quarryBTC.getBalanceOf(testAddress) == 50, "Expected 50 QBTC to be transferred to testAddress");
+    }
+
+    function test_burnQuarryBTCInsufficientBalance() public {
+        quarryBTC.mintQuarryBTC(address(this), 100);
+        assertTrue(quarryBTC.getBalanceOf(address(this)) == 100, "Expected 100 QBTC to be minted");
+
+        vm.prank(address(this));
+        vm.expectRevert("Insufficient balance in address");
+        quarryBTC.burnQuarryBTC(150);
+    }
 }

@@ -17,9 +17,6 @@ contract SharesRingBufferTest is Test {
           abi.encodeCall(SharesRingBuffer.initialize, (size))
         );
         ringbuf = SharesRingBuffer(proxy);
-        // initialize with no open 'slots'
-        // ringbuf = new SharesRingBuffer();
-        // ringbuf.initialize(0);
 
         // 0 shares
         assertTrue(ringbuf.numSharesInRingBuffer() == 0, "Ring buffer size is 0");
@@ -36,10 +33,6 @@ contract SharesRingBufferTest is Test {
           abi.encodeCall(SharesRingBuffer.initialize, (10))
         );
         ringbuf = SharesRingBuffer(proxy);
-
-        // initialize with 10 open 'slots'
-        // ringbuf = new SharesRingBuffer();
-        // ringbuf.initialize(10);
 
         // no pushed shares
         assertTrue(ringbuf.numSharesInRingBuffer() == 0, "Ring buffer size starts at 0");
@@ -77,8 +70,6 @@ contract SharesRingBufferTest is Test {
           abi.encodeCall(SharesRingBuffer.initialize, (10))
         );
         ringbuf = SharesRingBuffer(proxy);
-        // ringbuf = new SharesRingBuffer();
-        // ringbuf.initialize(10);
 
         // no pushed shares
         assertTrue(ringbuf.numSharesInRingBuffer() == 0, "Ring buffer size starts at 0");
@@ -91,7 +82,7 @@ contract SharesRingBufferTest is Test {
             ringbuf.pushToRingBuffer(i);
             i++; // ends at 21
         }
-        // if the last value pushed is 20 the ringbuff should be 
+        // if the last value pushed is 20 the ringbuff should be
         // value: 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
         // index:  0,  1,  2,  3,  4,  5,  6,  7,  8,  9 => 10 total shares
         assertTrue(i == 21, "i is at 21 so the last value pushed is 20");
@@ -110,16 +101,13 @@ contract SharesRingBufferTest is Test {
         assertTrue(ringbuf.ringBufferIsEmpty(), "Ring buffer is empty");
     }
 
-    function testFail_popFromEmpty() public {
+    function test_popFromEmpty() public {
         address proxy = Upgrades.deployUUPSProxy(
           "SharesRingBuffer.sol",
           // initialize with 10 open 'slots'
           abi.encodeCall(SharesRingBuffer.initialize, (10))
         );
         ringbuf = SharesRingBuffer(proxy);
-        // initialize with 10 open 'slots'
-        // ringbuf = new SharesRingBuffer();
-        // ringbuf.initialize(10);
 
         // element to be added (1-10)
         uint16 i = 1;
@@ -135,7 +123,7 @@ contract SharesRingBufferTest is Test {
         }
         assertTrue(ringbuf.ringBufferIsEmpty(), "Ring buffer is empty");
 
-        // should cause revert, cannot pop from empty buffer
+        vm.expectRevert("Buffer is empty");
         ringbuf.popFromRingBuffer();
     }
 }
