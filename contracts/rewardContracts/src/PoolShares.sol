@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
 // A pool share corresponding to 5 exahashes of work
-contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
+abstract contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
     using Strings for uint256;
 
     string private _baseTokenURI;

@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract SPVProof is Initializable {
+abstract contract SPVProof {
     /*
         Let's say we have the following Merkle tree for four transactions (A, B, C, D):
 
@@ -17,7 +17,7 @@ contract SPVProof is Initializable {
         the Merkle path would be the hash of B (sibling of A) and CD (sibling of AB)
         represented as an array: [B, CD].
     */
-    function initialize() public onlyInitializing {}
+    function initialize() public {}
 
     function spvProof(bytes32[] memory merklePath, bytes32 blockHash) public pure returns (bool success) {
 
