@@ -1,26 +1,28 @@
-// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-// import {Test, console} from "forge-std/Test.sol";
-// import {SharesPool} from "../src/SharesPool.sol";
-// import {PoolSares} from "../src/PoolShares.sol";
-// import {QuarryBTC} from"../src/QuarryBTC.sol";
+import {Test} from "forge-std/Test.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {SharesPool} from"../src/SharesPool.sol";
 
-// contract SharesPoolTest is Test {
-    // SharesPool public sharesPool;
-    // PoolShares public poolShares;
-    // QuarryBTC public quarryBTC;
+contract SharesPoolTest is Test {
+    SharesPool public sharesPool;
+    address public proxy;
 
-    // // setup contract objects for testing
-    // function setUp() public {
-        // sharesPool = new SharesPool();
-        // poolShares = new PoolShares();
-        // quarryBTC = new QuarryBTC();
+    function setUp() public {
+        address oracleAddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // replace with actual oracle address
+        proxy = Upgrades.deployUUPSProxy(
+            "SharesPool.sol",
+            abi.encodeCall(SharesPool.initialize, (oracleAddress))
+        );
+        sharesPool = SharesPool(proxy);
+    }
 
-        // // Initialize the contracts as needed
-        // // using anvil address
-        // sharesPool.initialize("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-        // poolShares.initialize("Quarry", "QRY", "base_uri");
-        // quarryBTC.initialize("QuarryBTC", "QBTC");
-    // }
-// }
+    function test_initialChainTip() public {
+        // Test the initial chain tip values
+        SharesPool.ChainTip memory chainTip = sharesPool.getChainTip();
+        assertEq(chainTip.previousBlockHash, bytes32(0), "Initial previous block hash should be 0");
+        assertEq(chainTip.merkleRootHash, bytes32(0), "Initial merkle root hash should be 0");
+    }
+
+    // Add more test functions as needed
+}

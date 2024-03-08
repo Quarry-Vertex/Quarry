@@ -53,7 +53,7 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
     }
 
     PoolShares shares; // Shares NFT instance
-    uint256 sharesId = 0;
+    uint256 sharesId;
 
     QuarryBTC quarryBTC; // synthetic BTC
 
@@ -109,7 +109,7 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
         bytes32[][] outputScripts;
     }
 
-    function initialize(string memory _oracleAddress) public initializer {
+    function initialize(address _oracleAddress) public initializer {
         // SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
         sharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
         SPVProof.initialize();
@@ -117,8 +117,9 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
         DIFFICULTY_THRESHOLD = 20000000000000;
         SHARES_RING_BUFFER_SIZE = 500;
 
-        chainTipOracle = address(bytes20(bytes32(uint256(keccak256(abi.encodePacked(_oracleAddress))))));
+        chainTipOracle = _oracleAddress;
         chainTip = ChainTip("", "");
+        sharesId = 0;
 
         shares.initialize("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
         quarryBTC.initialize("QuarryBTC", "QBTC");

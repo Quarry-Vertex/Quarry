@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "forge-std/console.sol";
+
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -55,6 +57,8 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
     }
 
     function burnShare(uint256 tokenId) public onlyOwner {
+        require(ownerOf(tokenId) != address(0), "Token does not exist");
+
         // Transfer the token to the zero address, effectively burning it
         _burn(tokenId);
 
@@ -63,5 +67,9 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
 
     function getOwnerOfShare(uint256 tokenId) external view returns (address) {
         return ownerOf(tokenId);
+    }
+
+    function tokenExists(uint256 tokenId) external view returns (bool) {
+        return _ownerOf(tokenId) != address(0);
     }
 }
