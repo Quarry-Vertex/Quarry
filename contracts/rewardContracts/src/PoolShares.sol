@@ -57,7 +57,7 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
     }
 
     function burnShare(uint256 tokenId) public onlyOwner {
-        require(ownerOf(tokenId) != address(0), "Token does not exist");
+        require(tokenExists(tokenId), "Token does not exist");
 
         // Transfer the token to the zero address, effectively burning it
         _burn(tokenId);
@@ -65,11 +65,11 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
         emit BurnedShare(msg.sender, tokenId);
     }
 
-    function getOwnerOfShare(uint256 tokenId) external view returns (address) {
+    function getOwnerOfShare(uint256 tokenId) public view returns (address) {
         return ownerOf(tokenId);
     }
 
-    function tokenExists(uint256 tokenId) external view returns (bool) {
+    function tokenExists(uint256 tokenId) public view returns (bool) {
         return _ownerOf(tokenId) != address(0);
     }
 }

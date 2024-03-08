@@ -39,12 +39,20 @@ contract PoolSharesTest is Test {
         uint256 tokenId = poolShares.awardShare(testAddress, 3);
         assertTrue(poolShares.getOwnerOfShare(tokenId) == testAddress, "Expected testAddress to be owner of tokenId 3");
 
-        vm.prank(testAddress);
+        vm.startPrank(testAddress);
         poolShares.approve(testAddress, tokenId);
-
-        vm.prank(testAddress);
         poolShares.transferFrom(testAddress, testAddress2, tokenId);
+        vm.stopPrank();
+
         assertFalse(poolShares.getOwnerOfShare(tokenId) == testAddress, "Expected tokenId 3 to have been transferred out of testAddress");
         assertTrue(poolShares.getOwnerOfShare(tokenId) == testAddress2, "Expected tokenId 3 to have been transferred to testAddress2");
+    }
+
+    function test_burnShareDoesNotExist() public {
+        uint256 tokenId = poolShares.awardShare(testAddress, 4);
+        assertTrue(poolShares.getOwnerOfShare(tokenId) == testAddress, "Expected testAddress to be owner of tokenId 4");
+
+        vm.expectRevert("Token does not exist");
+        poolShares.burnShare(5);
     }
 }

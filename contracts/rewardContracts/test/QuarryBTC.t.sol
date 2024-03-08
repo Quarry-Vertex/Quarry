@@ -46,4 +46,13 @@ contract QuarryBTCTest is Test {
         assertTrue(quarryBTC.getBalanceOf(address(this)) == 50, "Expected 50 QBTC to be transferred, leaving 50 left");
         assertTrue(quarryBTC.getBalanceOf(testAddress) == 50, "Expected 50 QBTC to be transferred to testAddress");
     }
+
+    function test_burnQuarryBTCInsufficientBalance() public {
+        quarryBTC.mintQuarryBTC(address(this), 100);
+        assertTrue(quarryBTC.getBalanceOf(address(this)) == 100, "Expected 100 QBTC to be minted");
+
+        vm.prank(address(this));
+        vm.expectRevert("Insufficient balance in address");
+        quarryBTC.burnQuarryBTC(150);
+    }
 }
