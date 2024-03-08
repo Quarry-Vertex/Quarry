@@ -47,14 +47,13 @@ async fn send_best_block(
     println!("Derived Address: {:?}", derived_address);
     let client_arc = Arc::new(SignerMiddleware::new(provider, wallet));
 
-
     // Load the ABI
     abigen!(
         SharesPoolContract,
         "../contracts/rewardContracts/out/SharesPool.sol/SharesPoolAbi.json",
         event_derives(serde::Deserialize, serde::Serialize)
     );
-    let contract = SharesPoolContract::new(contract_addr.parse::<Address>()?, client_arc.clone());
+    let contract = SharesPoolContract::new(contract_addr.parse::<H160>()?, client_arc.clone());
 
     // let test = contract.get_one_hundred().call().await?;
     let test_result = contract.get_one_hundred().call().await;
