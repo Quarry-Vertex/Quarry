@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 // Queue to track token ids for PPLNS
-abstract contract SharesRingBuffer {
+contract SharesRingBuffer {
     uint256 public bufferSize;   // Maximum size of the ring buffer
     uint256 public currSize;     // Current number of elements in the buffer
     uint256 public start;        // Index of first element
@@ -19,7 +19,7 @@ abstract contract SharesRingBuffer {
         uint256 position
     );
 
-    function initialize(uint256 _bufferSize) public {
+    constructor (uint256 _bufferSize) public {
         bufferSize = _bufferSize;
         buffer = new uint256[](bufferSize);
         currSize = 0;

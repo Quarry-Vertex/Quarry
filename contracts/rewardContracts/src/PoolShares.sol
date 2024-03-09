@@ -5,12 +5,11 @@ import "forge-std/console.sol";
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 // A pool share corresponding to 5 exahashes of work
-abstract contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
+contract PoolShares is ERC721, Ownable {
     using Strings for uint256;
 
     string private _baseTokenURI;
@@ -25,10 +24,7 @@ abstract contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
         uint256 indexed tokenId
     );
 
-    function initialize(string memory name, string memory symbol, string memory baseTokenURI) public initializer {
-        __ERC721_init(name, symbol);
-        __Ownable_init(msg.sender);
-
+    constructor (string memory name, string memory symbol, string memory baseTokenURI) ERC721(name, symbol) Ownable(msg.sender) public {
         _baseTokenURI = baseTokenURI;
     }
 

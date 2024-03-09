@@ -7,6 +7,7 @@ import {PoolShares} from"../src/PoolShares.sol";
 import "forge-std/console.sol";
 
 contract PoolSharesTest is Test {
+ 
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
     address testAddress2 = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
 
@@ -14,12 +15,12 @@ contract PoolSharesTest is Test {
     address proxy;
 
     function setUp() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "PoolShares.sol",
-            abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", ""))
-        );
+        //proxy = Upgrades.deployUUPSProxy(
+        //    "PoolShares.sol",
+        //    abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", ""))
+        //);
 
-        poolShares = PoolShares(proxy);
+        poolShares = new PoolShares("QuarryShares", "QShare", "");
     }
 
     function test_mintPoolShares() public {

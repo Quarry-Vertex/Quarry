@@ -13,11 +13,11 @@ contract QuarryBTCTest is Test {
     address proxy;
 
     function setUp() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "QuarryBTC.sol",
-            abi.encodeCall(QuarryBTC.initialize, ("Quarry", "QBTC"))
-        );
-        quarryBTC = QuarryBTC(proxy);
+        // proxy = Upgrades.deployUUPSProxy(
+        //     "QuarryBTC.sol",
+        //     abi.encodeCall(QuarryBTC.initialize, ("Quarry", "QBTC"))
+        // );
+        quarryBTC = new QuarryBTC("Quarry", "QBTC");
     }
 
     function test_mintQuarryBTC() public {

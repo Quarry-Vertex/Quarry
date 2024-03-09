@@ -3,14 +3,14 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-abstract contract SPVProof {
+contract SPVProof {
     /*
         Let's say we have the following Merkle tree for four transactions (A, B, C, D):
 
-                ROOT <- merkle root
-            /    \
+               ROOT <- merkle root
+              /    \
             AB     *CD
-            /  \    /  \
+           /  \    /  \
         A(tx)  B* C    D
 
         If we want to prove that transaction A is in the Merkle tree

@@ -4,165 +4,165 @@ import {Test} from "forge-std/Test.sol";
 import {SPVProof} from"../../src/lib/SPVProof.sol";
 
 contract SPVProofTest is Test {
-    // // declare contract object
-    // SPVProof public spvProof;
+    // declare contract object
+    SPVProof public spvProof;
 
-    // /*
-    //     Visualization of tree used for testing
-    //           ROOT <- merkle root
-    //          /    \
-    //         AB     *CD
-    //        /  \    /  \
-    //     A(tx)  B* C    D
-    // */
+    /*
+        Visualization of tree used for testing
+              ROOT <- merkle root
+             /    \
+            AB     *CD
+           /  \    /  \
+        A(tx)  B* C    D
+    */
 
-    // // initialize contract object
-    // function setUp() public {
-    //     spvProof = new SPVProof();
-    // }
+    // initialize contract object
+    function setUp() public {
+        spvProof = new SPVProof();
+    }
 
-    // /*
-    //     Test getting the correct merkle root from every node in the merkle tree
-    // */
+    /*
+        Test getting the correct merkle root from every node in the merkle tree
+    */
 
-    // // Starting at Transaction A
-    // function test_FromAPasses() public {
-    //     // Example of a valid Merkle path for transaction A in the Merkle tree
-    //     bytes32[] memory merklePath = new bytes32[](3);
-    //     // create transaction hashes in merkle path
-    //     bytes32 txA = "A";
-    //     bytes32 txB = "B";
-    //     bytes32 txC = "C";
-    //     bytes32 txD = "D";
-    //     bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
-    //     bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+    // Starting at Transaction A
+    function test_FromAPasses() public {
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](3);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txC = "C";
+        bytes32 txD = "D";
+        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
 
-    //     // populate merkle path
-    //     merklePath[0] = txA; // curhash (hash of the transaction)
-    //     merklePath[1] = txB;
-    //     merklePath[2] = txCD;
+        // populate merkle path
+        merklePath[0] = txA; // curhash (hash of the transaction)
+        merklePath[1] = txB;
+        merklePath[2] = txCD;
 
-    //     // get the root
-    //     bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
+        // get the root
+        bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-    //     assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
-    // }
+        assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
+    }
 
-    // // Starting at Transaction B
-    // function test_FromBPasses() public {
-    //     // Example of a valid Merkle path for transaction A in the Merkle tree
-    //     bytes32[] memory merklePath = new bytes32[](3);
-    //     // create transaction hashes in merkle path
-    //     bytes32 txA = "A";
-    //     bytes32 txB = "B";
-    //     bytes32 txC = "C";
-    //     bytes32 txD = "D";
-    //     bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
-    //     bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+    // Starting at Transaction B
+    function test_FromBPasses() public {
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](3);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txC = "C";
+        bytes32 txD = "D";
+        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
 
-    //     // populate merkle path
-    //     merklePath[0] = txB; // curhash (hash of the transaction)
-    //     merklePath[1] = txA;
-    //     merklePath[2] = txCD;
+        // populate merkle path
+        merklePath[0] = txB; // curhash (hash of the transaction)
+        merklePath[1] = txA;
+        merklePath[2] = txCD;
 
-    //     // get the root
-    //     bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
+        // get the root
+        bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-    //     assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
-    // }
+        assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
+    }
 
-    // // Starting at Transaction C
-    // function test_FromCPasses() public {
-    //     // Example of a valid Merkle path for transaction A in the Merkle tree
-    //     bytes32[] memory merklePath = new bytes32[](3);
-    //     // create transaction hashes in merkle path
-    //     bytes32 txA = "A";
-    //     bytes32 txB = "B";
-    //     bytes32 txC = "C";
-    //     bytes32 txD = "D";
-    //     bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
-    //     bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+    // Starting at Transaction C
+    function test_FromCPasses() public {
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](3);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txC = "C";
+        bytes32 txD = "D";
+        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
 
-    //     // populate merkle path
-    //     merklePath[0] = txC; // curhash (hash of the transaction)
-    //     merklePath[1] = txD;
-    //     merklePath[2] = txAB;
+        // populate merkle path
+        merklePath[0] = txC; // curhash (hash of the transaction)
+        merklePath[1] = txD;
+        merklePath[2] = txAB;
 
-    //     // get the root
-    //     bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
+        // get the root
+        bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-    //     assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
-    // }
+        assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
+    }
 
-    // // Starting at Transaction D
-    // function test_FromDPasses() public {
-    //     // Example of a valid Merkle path for transaction A in the Merkle tree
-    //     bytes32[] memory merklePath = new bytes32[](3);
-    //     // create transaction hashes in merkle path
-    //     bytes32 txA = "A";
-    //     bytes32 txB = "B";
-    //     bytes32 txC = "C";
-    //     bytes32 txD = "D";
-    //     bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
-    //     bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+    // Starting at Transaction D
+    function test_FromDPasses() public {
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](3);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txC = "C";
+        bytes32 txD = "D";
+        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
 
-    //     // populate merkle path
-    //     merklePath[0] = txD; // curhash (hash of the transaction)
-    //     merklePath[1] = txC;
-    //     merklePath[2] = txAB;
+        // populate merkle path
+        merklePath[0] = txD; // curhash (hash of the transaction)
+        merklePath[1] = txC;
+        merklePath[2] = txAB;
 
-    //     // get the root
-    //     bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
+        // get the root
+        bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-    //     assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
-    // }
+        assertTrue(spvProof.spvProof(merklePath, root), "Valid SPV proof should pass");
+    }
 
-    // /*
-    //     Failing proofs due to incorrect roots
-    // */
+    /*
+        Failing proofs due to incorrect roots
+    */
 
-    // function test_FromAFails() public {
-    //     // Example of a valid Merkle path for transaction A in the Merkle tree
-    //     bytes32[] memory merklePath = new bytes32[](3);
-    //     // create transaction hashes in merkle path
-    //     bytes32 txA = "A";
-    //     bytes32 txB = "B";
-    //     bytes32 txC = "C";
-    //     bytes32 txD = "D";
-    //     bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
-    //     bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+    function test_FromAFails() public {
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](3);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txC = "C";
+        bytes32 txD = "D";
+        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
 
-    //     // populate merkle path
-    //     merklePath[0] = txA; // curhash (hash of the transaction)
-    //     merklePath[1] = txB;
-    //     merklePath[2] = txCD;
+        // populate merkle path
+        merklePath[0] = txA; // curhash (hash of the transaction)
+        merklePath[1] = txB;
+        merklePath[2] = txCD;
 
-    //     // get the root (order matters)
-    //     bytes32 wrongRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(txCD, txAB))));
-    //     vm.expectRevert("SPV proof failed");
-    //     spvProof.spvProof(merklePath, wrongRoot);
-    // }
+        // get the root (order matters)
+        bytes32 wrongRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(txCD, txAB))));
+        vm.expectRevert("SPV proof failed");
+        spvProof.spvProof(merklePath, wrongRoot);
+    }
 
-    // function test_FromCFails() public {
-    //     // Example of a valid Merkle path for transaction A in the Merkle tree
-    //     bytes32[] memory merklePath = new bytes32[](3);
-    //     // create transaction hashes in merkle path
-    //     bytes32 txA = "A";
-    //     bytes32 txB = "B";
-    //     bytes32 txC = "C";
-    //     bytes32 txD = "D";
-    //     bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
-    //     bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+    function test_FromCFails() public {
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](3);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txC = "C";
+        bytes32 txD = "D";
+        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
 
-    //     // populate merkle path
-    //     merklePath[0] = txC; // curhash (hash of the transaction)
-    //     merklePath[1] = txD;
-    //     merklePath[2] = txAB;
+        // populate merkle path
+        merklePath[0] = txC; // curhash (hash of the transaction)
+        merklePath[1] = txD;
+        merklePath[2] = txAB;
 
-    //     // get the root (order matters)
-    //     bytes32 wrongRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(txCD, txAB))));
-    //     vm.expectRevert("SPV proof failed");
-    //     spvProof.spvProof(merklePath, wrongRoot);
-    // }
+        // get the root (order matters)
+        bytes32 wrongRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(txCD, txAB))));
+        vm.expectRevert("SPV proof failed");
+        spvProof.spvProof(merklePath, wrongRoot);
+    }
 
 }
