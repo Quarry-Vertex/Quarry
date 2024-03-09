@@ -2,9 +2,14 @@
 
 use ethers::prelude::*;
 use reqwest::Client;
+// include dependencies
 use serde_json::{json, Value};
 use std::str::FromStr;
 use std::sync::Arc;
+
+// include contract bindings
+mod bindings;
+use bindings::shares_pool::SharesPool;
 
 #[tokio::main]
 async fn main() {
@@ -47,14 +52,8 @@ async fn send_best_block(
     println!("Derived Address: {:?}", derived_address);
     let client_arc = Arc::new(SignerMiddleware::new(provider, wallet));
 
-
     // Load the ABI
-    abigen!(
-        SharesPoolContract,
-        "../contracts/rewardContracts/out/SharesPool.sol/SharesPoolAbi.json",
-        event_derives(serde::Deserialize, serde::Serialize)
-    );
-    let contract = SharesPoolContract::new(contract_addr.parse::<Address>()?, client_arc.clone());
+    let contract = SharesPool::new(contract_addr.parse::<Address>()?, client_arc.clone());
 
     // let test = contract.get_one_hundred().call().await?;
     let test_result = contract.get_one_hundred().call().await;
