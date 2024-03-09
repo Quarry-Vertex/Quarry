@@ -25,7 +25,7 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 
 */
 
-contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
+contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
     /*
         Difficulty Threshold Calculation:
             bitcoin_exahash = 10**18
@@ -65,8 +65,6 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
     ChainTip public chainTip;
-
-    SharesRingBuffer sharesRingBuffer;
 
     event ChainTipSet(
         bytes32 merkleRootHash
@@ -110,8 +108,7 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
     }
 
     function initialize(address _oracleAddress) public initializer {
-        // SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
-        sharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
+        SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
         SPVProof.initialize();
 
         DIFFICULTY_THRESHOLD = 20000000000000;
@@ -121,8 +118,8 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
         chainTip = ChainTip("", "");
         sharesId = 0;
 
-        shares.initialize("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
-        quarryBTC.initialize("QuarryBTC", "QBTC");
+        // shares.initialize("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
+        // quarryBTC.initialize("QuarryBTC", "QBTC");
 
         // TODO: need to set quarryPegInAddress and stratumPool
     }
@@ -213,11 +210,11 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
 
         // All checks pass, credit user with share
         uint256 newShareId = shares.awardShare(_account, sharesId++);
-        if (sharesRingBuffer.ringBufferIsFull()) {
-            uint256 burnTokenId = sharesRingBuffer.popFromRingBuffer();
+        if (ringBufferIsFull()) {
+            uint256 burnTokenId = popFromRingBuffer();
             shares.burnShare(burnTokenId);
         }
-        sharesRingBuffer.pushToRingBuffer(newShareId);
+        pushToRingBuffer(newShareId);
 
         emit BlockRevealed(_block.header.merkleRootHash, _account);
 
@@ -275,11 +272,11 @@ contract SharesPool is Initializable, SPVProof {//SharesRingBuffer, SPVProof {
     function distributeRewards(BitcoinBlock memory _block) public onlyStratumPool returns (bool success) {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
-        uint256 numShares = sharesRingBuffer.numSharesInRingBuffer();
+        uint256 numShares = numSharesInRingBuffer();
         bytes8 blockReward = _block.outputValues[0][0];
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
-        while (sharesRingBuffer.ringBufferIsEmpty()) {
-            uint256 burnTokenId = sharesRingBuffer.popFromRingBuffer();
+        while (ringBufferIsEmpty()) {
+            uint256 burnTokenId = popFromRingBuffer();
             address shareOwner = shares.getOwnerOfShare(burnTokenId);
             quarryBTC.mintQuarryBTC(shareOwner, blockRewardPerShare);
             shares.burnShare(burnTokenId);

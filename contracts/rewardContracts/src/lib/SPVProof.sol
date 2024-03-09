@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract SPVProof is Initializable {
+abstract contract SPVProof is Initializable {
     /*
         Let's say we have the following Merkle tree for four transactions (A, B, C, D):
 
