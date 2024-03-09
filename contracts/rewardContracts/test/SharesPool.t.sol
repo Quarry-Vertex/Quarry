@@ -7,9 +7,10 @@ import {SharesPool} from"../src/SharesPool.sol";
 contract SharesPoolTest is Test {
     SharesPool public sharesPool;
     address public proxy;
+    address public oracleAddress;
 
     function setUp() public {
-        address oracleAddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // replace with actual oracle address
+        oracleAddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // replace with actual oracle address
         proxy = Upgrades.deployUUPSProxy(
             "SharesPool.sol",
             abi.encodeCall(SharesPool.initialize, (oracleAddress))
@@ -18,10 +19,12 @@ contract SharesPoolTest is Test {
     }
 
     function test_initialChainTip() public {
+        vm.startPrank(oracleAddress);
         // Test the initial chain tip values
         SharesPool.ChainTip memory chainTip = sharesPool.getChainTip();
         assertEq(chainTip.previousBlockHash, bytes32(0), "Initial previous block hash should be 0");
         assertEq(chainTip.merkleRootHash, bytes32(0), "Initial merkle root hash should be 0");
+        vm.stopPrank();
     }
 
     // Add more test functions as needed
