@@ -162,6 +162,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         return commits[_blockHash];
     }
 
+    // convert bits to difficulty
     function _calculateDifficulty(uint32 _bits) public pure returns (uint256) {
         uint256 maxTarget = 0xFFFF * 256**(0x1D - 3);
         uint256 target = (_bits & 0xFFFFFF) * 256**(_bits >> 24 - 3);
