@@ -28,13 +28,16 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
     /*
         Difficulty Threshold Calculation:
-            bitcoin_exahash = 10**18
-            network_hash_rate_bitcoin = 500 * bitcoin_exahash  # Example: 500 Exahash/s for Bitcoin
-            target_block_time_bitcoin = 600  # 10 minutes
-            miner_hash_rate = 5 * bitcoin_exahash  # 5 Exahash/s
-            Formula: difficulty = network_hash_rate_bitcoin / (target_block_time_bitcoin * miner_hash_rate) = 2*10^13
+        https://bitcoin.stackexchange.com/questions/5556/relationship-between-hash-rate-and-difficulty
+        5 EH/s = 5000000000000000000 H/s
+        difficulty = hashrate / (2^256 / max_target / intended_time_per_block)
+            = hashrate / (2^256 / (2^208*65535) / 600)
+            = hashrate / (2^48 / 65535 / 600)
+            = hashrate / 7158388.055
+            = 5000000000000000000 / 7158388.055
+            = ~698481272821
     */
-    uint256 DIFFICULTY_THRESHOLD; // 2 * 10^13
+    uint256 DIFFICULTY_THRESHOLD;
 
     uint256 SHARES_RING_BUFFER_SIZE; // TODO: Set sharesRingBuffer size to correct value
 
@@ -115,7 +118,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
         SPVProof.initialize();
 
-        DIFFICULTY_THRESHOLD = 20000000000000;
+        DIFFICULTY_THRESHOLD = 698481272821;
         SHARES_RING_BUFFER_SIZE = 500;
 
         chainTipOracle = _oracleAddress;
@@ -246,7 +249,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         require(prevHash == chainTip.merkleRootHash, "Submitted block is stale");
 
         // Check that the Coinbase tx is pointed to current peg in address of the mining pool
-        require(scriptPubKeyToAddress(extractScriptPubKey(_block.outputScripts[0][0])) == quarryPegInAddress,
+        require(_scriptPubKeyToAddress(_extractScriptPubKey(_block.outputScripts[0][0])) == quarryPegInAddress,
             "Coinbase transaction does not point to quarry peg in address");
 
         // SPV Proof TODO: Confirm this logic is correct
