@@ -107,6 +107,10 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         bytes32[][] outputScripts;
     }
 
+    function getOneHundred() public view returns (uint256) {
+        return 100;
+    }
+
     function initialize(address _oracleAddress) public initializer {
         SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
         SPVProof.initialize();
@@ -118,28 +122,10 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         chainTip = ChainTip("", "");
         sharesId = 0;
 
-        // shares.initialize("Quarry", "QRY", ""); // TODO: Fill in baseTokenURI
-        // quarryBTC.initialize("QuarryBTC", "QBTC");
-
         // TODO: need to set quarryPegInAddress and stratumPool
     }
 
-    // To prevent work from being "stolen" (man in the middle attack) miners should reveal a HASH(Block hash + Destination
-    // Quarry address) first then submits the rest of the block and the destination Quarry address to be credited with the pool share.
-    function submitHash(bytes32 _blockHash, address _account) public {
-        commits[_blockHash] = _account;
-        emit HashCommitted(_blockHash, _account);
-    }
-
-    function _calculateDifficulty(uint32 _bits) private pure returns (uint256) {
-        uint256 maxTarget = 0xFFFF * 256**(0x1D - 3);
-        uint256 target = (_bits & 0xFFFFFF) * 256**(_bits >> 24 - 3);
-        uint256 difficulty = maxTarget / target;
-        return difficulty;
-    }
-
     function setChainTip(ChainTip memory _chainTip) public onlyOracle {
-        console.log("calling setChainTip");
         // check if the merkleRoot hasn't been populated the chain tip hasn't been set
         if (_chainTip.merkleRootHash != "") {
             require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
@@ -162,8 +148,68 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         return chainTip;
     }
 
-    function getOneHundred() public view returns (uint256) {
-        return 100;
+    // To prevent work from being "stolen" (man in the middle attack) miners should reveal a HASH(Block hash + Destination
+    // Quarry address) first then submits the rest of the block and the destination Quarry address to be credited with the pool share.
+    function submitHash(bytes32 _blockHash, address _account) public {
+        commits[_blockHash] = _account;
+        emit HashCommitted(_blockHash, _account);
+    }
+
+    function getAddressForSubmittedHash(bytes32 _blockHash) public view returns (address account) {
+        return commits[_blockHash];
+    }
+
+    function _calculateDifficulty(uint32 _bits) public pure returns (uint256) {
+        uint256 maxTarget = 0xFFFF * 256**(0x1D - 3);
+        uint256 target = (_bits & 0xFFFFFF) * 256**(_bits >> 24 - 3);
+        uint256 difficulty = maxTarget / target;
+        return difficulty;
+    }
+
+    // This method assumes Pay-to-Script-Hash (P2SH)
+    function _extractScriptPubKey(bytes32 script) public pure returns (bytes25) {
+        require(script.length == 25, "Invalid script length");
+
+        // Ensure the script follows the P2SH format
+        require(script[0] == 0xa9 && script[script.length - 1] == 0x87, "Not a P2SH script");
+
+        // Extract the scriptPubKey by removing OP_HASH160 and OP_EQUAL operations
+        bytes25 scriptPubKey;
+        assembly {
+            // Point to the free memory slot
+            let dest := add(scriptPubKey, 32)
+            // Point to the source in script
+            let src := add(script, 33)
+            // Copy 24 bytes from src to dest
+            for { let i := 0 } lt(i, 24) { i := add(i, 1) } {
+                mstore8(add(dest, i), mload(add(src, i)))
+            }
+        }
+
+        return scriptPubKey;
+    }
+
+    // This method assumes Pay-to-Script-Hash (P2SH)
+    function _scriptPubKeyToAddress(bytes25 scriptPubKey) public pure returns (address) {
+        bytes20 versionByteP2SH = hex"05"; // Version byte for P2SH addresses on mainnet
+
+        require(scriptPubKey.length >= 25, "Invalid scriptPubKey length");
+
+        if (scriptPubKey[0] == 0xa9 && scriptPubKey[scriptPubKey.length - 1] == 0x87) {
+            // Check if it's a P2SH scriptPubKey
+
+            // Extract the scriptHash
+            bytes20 scriptHash;
+            assembly {
+                scriptHash := mload(add(add(scriptPubKey, 0x21), 0))
+            }
+
+            // Create the address by concatenating version byte and script hash
+            bytes memory addressBytes = abi.encodePacked(versionByteP2SH, scriptHash);
+            return address(uint160(uint256(keccak256(addressBytes))));
+        } else {
+            revert("Not a P2SH scriptPubKey");
+        }
     }
 
     /*
@@ -192,7 +238,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
 
         uint256 difficulty = _calculateDifficulty(_block.header.bits);
 
-        // double check units match up here
+        // Difficulty of block must be less than the threshold
         require(difficulty < DIFFICULTY_THRESHOLD, "Pool difficulty not met");
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
@@ -219,52 +265,6 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         emit BlockRevealed(_block.header.merkleRootHash, _account);
 
         return true;
-    }
-
-    // This method assumes Pay-to-Script-Hash (P2SH)
-    function extractScriptPubKey(bytes32 script) public pure returns (bytes25) {
-        require(script.length == 25, "Invalid script length");
-
-        // Ensure the script follows the P2SH format
-        require(script[0] == 0xa9 && script[script.length - 1] == 0x87, "Not a P2SH script");
-
-        // Extract the scriptPubKey by removing OP_HASH160 and OP_EQUAL operations
-        bytes25 scriptPubKey;
-        assembly {
-            // Point to the free memory slot
-            let dest := add(scriptPubKey, 32)
-            // Point to the source in script
-            let src := add(script, 33)
-            // Copy 24 bytes from src to dest
-            for { let i := 0 } lt(i, 24) { i := add(i, 1) } {
-                mstore8(add(dest, i), mload(add(src, i)))
-            }
-        }
-
-        return scriptPubKey;
-    }
-
-    // This method assumes Pay-to-Script-Hash (P2SH)
-    function scriptPubKeyToAddress(bytes25 scriptPubKey) internal pure returns (address) {
-        bytes20 versionByteP2SH = hex"05"; // Version byte for P2SH addresses on mainnet
-
-        require(scriptPubKey.length >= 25, "Invalid scriptPubKey length");
-
-        if (scriptPubKey[0] == 0xa9 && scriptPubKey[scriptPubKey.length - 1] == 0x87) {
-            // Check if it's a P2SH scriptPubKey
-
-            // Extract the scriptHash
-            bytes20 scriptHash;
-            assembly {
-                scriptHash := mload(add(add(scriptPubKey, 0x21), 0))
-            }
-
-            // Create the address by concatenating version byte and script hash
-            bytes memory addressBytes = abi.encodePacked(versionByteP2SH, scriptHash);
-            return address(uint160(uint256(keccak256(addressBytes))));
-        } else {
-            revert("Not a P2SH scriptPubKey");
-        }
     }
 
     // Clears out all shares and distributes rewards prorata to addresses
