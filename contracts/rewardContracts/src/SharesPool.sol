@@ -43,7 +43,11 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
 
     address stratumPool;
     address chainTipOracle;
-    bytes32 quarryPegInAddress;
+    bytes32 public quarryPegInAddress;
+
+    function setPegInAddress(bytes32 pegInAddress) public {
+        quarryPegInAddress = pegInAddress;
+    }
 
     modifier onlyOracle() {
         require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");

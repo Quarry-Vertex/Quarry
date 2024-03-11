@@ -44,7 +44,7 @@ def forge_test(args):
     # process to get "upgradable" tests working
     subprocess.run(["forge", "clean"]) # clean
     subprocess.run(["forge", "build"]) # rebuild
-    subprocess.run(["forge", "test", "--ffi"]) # test with ffi
+    subprocess.run(["forge", "test", "--ffi", "-vv"]) # test with ffi
     os.chdir("../..")
 
 
