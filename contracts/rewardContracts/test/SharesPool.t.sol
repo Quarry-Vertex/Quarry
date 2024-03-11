@@ -48,17 +48,9 @@ contract SharesPoolTest is Test {
         assertEq(sharesPool.getAddressForSubmittedHash(bytes32(testHash)), testAddress);
     }
 
-    function test_calculateDifficulty() public {
+    // function test_calculateDifficulty() public {
 
-    }
-
-    function test_extractScriptPubKey() public {
-
-    }
-
-    function test_scriptPubKeyToAddress() public {
-        
-    }
+    // }
 
     // function test_submitBlock() public {
         
