@@ -48,27 +48,19 @@ contract SharesPoolTest is Test {
         assertEq(sharesPool.getAddressForSubmittedHash(bytes32(testHash)), testAddress);
     }
 
-    /*
     function test_calculateDifficulty() public {
-        vm.startPrank(oracleAddress);
-        uint32 bits = 0x1d00ffff;
-        uint256 calcDifficulty = sharesPool._calculateDifficulty(bits);
-        vm.stopPrank();
-        // different expected values
-        // hex
-        uint256 expected = 0x15a35c0000000000000000000000000000000000000000;
-        // decimal
-        uint256 expectedDecimal = 2072520395859657486634608572838975759381606196813234176;
-        assertEq(calcDifficulty, expected);
+        uint32 bits = 0x1b0404cb;
+        uint256 difficulty = sharesPool._calculateDifficulty(bits);
+        uint256 expectedDifficulty = 163074209349632;
+        assertEq(difficulty, expectedDifficulty);
     }
 
-    function test_extractScriptPubKey() public {
+    // function test_submitBlock() public {
+    //     vm.startPrank(oracleAddress);
+    //     vm.stopPrank();
+    // }
 
-    }
-
-    function test_scriptPubKeyToAddress() public {
-
-    }
+    /*
 
     function test_distributeRewards() public {
 
