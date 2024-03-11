@@ -38,6 +38,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
             = ~698481272821
     */
     uint256 DIFFICULTY_THRESHOLD;
+    uint256 DIFFICULTY_SCALING;
 
     uint256 SHARES_RING_BUFFER_SIZE; // TODO: Set sharesRingBuffer size to correct value
 
@@ -118,7 +119,8 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
         SPVProof.initialize();
 
-        DIFFICULTY_THRESHOLD = 698481272821;
+        DIFFICULTY_SCALING = 10**10;
+        DIFFICULTY_THRESHOLD = 698481272821 * DIFFICULTY_SCALING;
         SHARES_RING_BUFFER_SIZE = 500;
 
         chainTipOracle = _oracleAddress;
@@ -162,11 +164,15 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         return commits[_blockHash];
     }
 
+    function _ldexp(uint256 val, uint256 exp) private pure returns (uint256) {
+        return val * (2**exp);
+    }
+
     // convert bits to difficulty
-    function _calculateDifficulty(uint32 _bits) public pure returns (uint256) {
-        uint256 maxTarget = 0xFFFF * 256**(0x1D - 3);
-        uint256 target = (_bits & 0xFFFFFF) * 256**(_bits >> 24 - 3);
-        uint256 difficulty = maxTarget / target;
+    function _calculateDifficulty(uint32 _bits) public view returns (uint256) {
+        uint256 exponent_diff = 8 * (0x1D - ((_bits >> 24) & 0xFF));
+        uint256 significand = _bits & 0xFFFFFF;
+        uint256 difficulty = _ldexp((0x00FFFF*DIFFICULTY_SCALING) / significand, exponent_diff);
         return difficulty;
     }
 
@@ -196,7 +202,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
 
         // Difficulty of block must be less than the threshold
         uint256 difficulty = _calculateDifficulty(_block.header.bits);
-        require(difficulty < DIFFICULTY_THRESHOLD, "Pool difficulty not met");
+        require(difficulty < DIFFICULTY_THRESHOLD*DIFFICULTY_SCALING, "Pool difficulty not met");
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _block.header.previousBlockHash;
