@@ -43,7 +43,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
 
     address stratumPool;
     address chainTipOracle;
-    address quarryPegInAddress;
+    bytes32 quarryPegInAddress;
 
     modifier onlyOracle() {
         require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");
@@ -105,9 +105,9 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
     struct BitcoinBlock {
         BlockHeader header;
 
-        // Flattened Transactions
-        bytes8[][] outputValues;
-        bytes32[][] outputScripts;
+        // Transactions
+        bytes32 outputAddress;
+        bytes8 blockReward;
     }
 
     function getOneHundred() public view returns (uint256) {
@@ -170,52 +170,6 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         return difficulty;
     }
 
-    // This method assumes Pay-to-Script-Hash (P2SH)
-    function _extractScriptPubKey(bytes32 script) public pure returns (bytes25) {
-        require(script.length == 25, "Invalid script length");
-
-        // Ensure the script follows the P2SH format
-        require(script[0] == 0xa9 && script[script.length - 1] == 0x87, "Not a P2SH script");
-
-        // Extract the scriptPubKey by removing OP_HASH160 and OP_EQUAL operations
-        bytes25 scriptPubKey;
-        assembly {
-            // Point to the free memory slot
-            let dest := add(scriptPubKey, 32)
-            // Point to the source in script
-            let src := add(script, 33)
-            // Copy 24 bytes from src to dest
-            for { let i := 0 } lt(i, 24) { i := add(i, 1) } {
-                mstore8(add(dest, i), mload(add(src, i)))
-            }
-        }
-
-        return scriptPubKey;
-    }
-
-    // This method assumes Pay-to-Script-Hash (P2SH)
-    function _scriptPubKeyToAddress(bytes25 scriptPubKey) public pure returns (address) {
-        bytes20 versionByteP2SH = hex"05"; // Version byte for P2SH addresses on mainnet
-
-        require(scriptPubKey.length >= 25, "Invalid scriptPubKey length");
-
-        if (scriptPubKey[0] == 0xa9 && scriptPubKey[scriptPubKey.length - 1] == 0x87) {
-            // Check if it's a P2SH scriptPubKey
-
-            // Extract the scriptHash
-            bytes20 scriptHash;
-            assembly {
-                scriptHash := mload(add(add(scriptPubKey, 0x21), 0))
-            }
-
-            // Create the address by concatenating version byte and script hash
-            bytes memory addressBytes = abi.encodePacked(versionByteP2SH, scriptHash);
-            return address(uint160(uint256(keccak256(addressBytes))));
-        } else {
-            revert("Not a P2SH scriptPubKey");
-        }
-    }
-
     /*
     - Keep track of which addresses have how many shares (mapping of address to number of shares)
     - Checks should be:
@@ -240,9 +194,8 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
             "Block hash has already been submitted"
         );
 
-        uint256 difficulty = _calculateDifficulty(_block.header.bits);
-
         // Difficulty of block must be less than the threshold
+        uint256 difficulty = _calculateDifficulty(_block.header.bits);
         require(difficulty < DIFFICULTY_THRESHOLD, "Pool difficulty not met");
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
@@ -250,7 +203,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         require(prevHash == chainTip.merkleRootHash, "Submitted block is stale");
 
         // Check that the Coinbase tx is pointed to current peg in address of the mining pool
-        require(_scriptPubKeyToAddress(_extractScriptPubKey(_block.outputScripts[0][0])) == quarryPegInAddress,
+        require(_block.outputAddress == quarryPegInAddress,
             "Coinbase transaction does not point to quarry peg in address");
 
         // SPV Proof TODO: Confirm this logic is correct
@@ -277,7 +230,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
         uint256 numShares = numSharesInRingBuffer();
-        bytes8 blockReward = _block.outputValues[0][0];
+        bytes8 blockReward = _block.blockReward;
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
         while (ringBufferIsEmpty()) {
             uint256 burnTokenId = popFromRingBuffer();

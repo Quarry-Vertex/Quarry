@@ -67,7 +67,7 @@ contract SharesPoolTest is Test {
     }
 
     function test_scriptPubKeyToAddress() public {
-        
+
     }
 
     function test_distributeRewards() public {
