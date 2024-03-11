@@ -71,54 +71,55 @@ contract SharesPoolTest is Test {
         vm.startPrank(oracleAddress);
 
         // Example of a valid Merkle path for transaction A in the Merkle tree
-        bytes32[] memory merklePath = new bytes32[](3);
+        bytes32[] memory merklePath = new bytes32[](2);
         // create transaction hashes in merkle path
         bytes32 txA = "A";
         bytes32 txB = "B";
-        bytes32 txC = "C";
-        bytes32 txD = "D";
-        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
         bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
 
         // populate merkle path
         merklePath[0] = txA; // curhash (hash of the transaction)
         merklePath[1] = txB;
-        merklePath[2] = txCD;
 
         // get the root
-        bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
+        bytes32 root = txAB;
 
         assertTrue(sharesPool.spvProof(merklePath, root), "Valid SPV proof should pass");
 
-        // // set chaing tip
-        // SharesPool.ChainTip memory newTip;
-        // newTip.previousBlockHash = txAB;
-        // newTip.merkleRootHash = root;
-        // sharesPool.setChainTip(newTip);
-        
-        // // create a block header
-        // SharesPool.BlockHeader memory blockHeader;
-        // blockHeader.version = 10001;
-        // blockHeader.previousBlockHash = txAB;
-        // blockHeader.merkleRootHash = root;
-        // blockHeader.timestamp = 10001;
-        // blockHeader.bits = 10001;
-        // blockHeader.nonce = 10001;
+        // set initial chain tip
+        SharesPool.ChainTip memory initialTip;
+        initialTip.previousBlockHash = 0;
+        initialTip.merkleRootHash = txA;
+        sharesPool.setChainTip(initialTip);
+        // create a new chain tip
+        SharesPool.ChainTip memory newTip;
+        newTip.previousBlockHash = txA;
+        newTip.merkleRootHash = root;
+        sharesPool.setChainTip(newTip);
 
-        // // create a block
-        // bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        // sharesPool.setPegInAddress(outputAddress);
-        // bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+        // create a block header
+        SharesPool.BlockHeader memory blockHeader;
+        blockHeader.version = 10001;
+        blockHeader.previousBlockHash = txAB;
+        blockHeader.merkleRootHash = root;
+        blockHeader.timestamp = 10001;
+        blockHeader.bits = 10001;
+        blockHeader.nonce = 10001;
 
-        // SharesPool.BitcoinBlock memory curBlock;
-        // curBlock.header = blockHeader;
-        // curBlock.outputAddress = outputAddress;
-        // curBlock.blockReward = blockReward;
+        // create a block
+        bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        sharesPool.setPegInAddress(outputAddress);
+        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
 
-        // // create address
-        // address account = address(bytes20(keccak256(abi.encode(block.timestamp))));
+        SharesPool.BitcoinBlock memory curBlock;
+        curBlock.header = blockHeader;
+        curBlock.outputAddress = outputAddress;
+        curBlock.blockReward = blockReward;
 
-        // assertTrue(sharesPool.submitBlock(curBlock, merklePath, account), "block successfully submitted");
+        // create address
+        address account = address(bytes20(keccak256(abi.encode(block.timestamp))));
+
+        assertTrue(sharesPool.submitBlock(curBlock, merklePath, account), "block successfully submitted");
 
         vm.stopPrank();
     }
