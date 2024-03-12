@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {PoolShares} from"../src/PoolShares.sol";
+import {QuarryBTC} from"../src/QuarryBTC.sol";
 import {SharesPool} from"../src/SharesPool.sol";
 
 import "forge-std/console.sol";
@@ -16,18 +17,27 @@ contract SharesPoolTest is Test {
     SharesPool public sharesPool;
     address public proxy;
     address public proxyPoolShares;
+    address public proxyQuarryBTC;
 
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
             "SharesPool.sol",
             abi.encodeCall(SharesPool.initialize, (oracleAddress, pegInAddress, 500))
         );
+
         proxyPoolShares = Upgrades.deployUUPSProxy(
           "PoolShares.sol",
-          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", "", proxy))
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
         );
+
+        proxyQuarryBTC = Upgrades.deployUUPSProxy(
+          "QuarryBTC.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryBTC", "QBTC", proxy))
+        );
+
         sharesPool = SharesPool(proxy);
         sharesPool.setPoolSharesContract(proxyPoolShares);
+        sharesPool.setQuarryBTCContract(proxyQuarryBTC);
     }
 
     function test_initialChainTip() public {
@@ -62,18 +72,6 @@ contract SharesPoolTest is Test {
         uint256 expectedDifficulty = 163074209349632;
         assertEq(difficulty, expectedDifficulty);
     }
-
-    // function test_submitBlock() public {
-    //     vm.startPrank(oracleAddress);
-    //     vm.stopPrank();
-    // }
-
-    /*
-
-    function test_distributeRewards() public {
-
-    }
-    */
 
     function test_submitBlock() public {
         vm.startPrank(oracleAddress);
@@ -131,4 +129,7 @@ contract SharesPoolTest is Test {
         vm.stopPrank();
     }
 
+    // function test_distributeRewards() public {
+
+    // }
 }

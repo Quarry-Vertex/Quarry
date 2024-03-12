@@ -22,10 +22,12 @@ contract PoolSharesTest is Test {
             "SharesPool.sol",
             abi.encodeCall(SharesPool.initialize, (oracleAddress, pegInAddress, 500))
         );
+
         proxyPoolShares = Upgrades.deployUUPSProxy(
           "PoolShares.sol",
-          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", "", proxy))
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
         );
+
         poolShares = PoolShares(proxyPoolShares);
     }
 

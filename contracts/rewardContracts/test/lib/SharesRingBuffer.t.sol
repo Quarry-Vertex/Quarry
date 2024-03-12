@@ -26,7 +26,7 @@ contract SharesRingBufferTest is Test {
         );
         proxyPoolShares = Upgrades.deployUUPSProxy(
           "PoolShares.sol",
-          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", "", proxy))
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
         );
         sharesPool = SharesPool(proxy);
         sharesPool.setPoolSharesContract(proxyPoolShares);
@@ -45,7 +45,7 @@ contract SharesRingBufferTest is Test {
         );
         proxyPoolShares = Upgrades.deployUUPSProxy(
           "PoolShares.sol",
-          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", "", proxy))
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
         );
         sharesPool = SharesPool(proxy);
         sharesPool.setPoolSharesContract(proxyPoolShares);
@@ -86,7 +86,7 @@ contract SharesRingBufferTest is Test {
         );
         proxyPoolShares = Upgrades.deployUUPSProxy(
           "PoolShares.sol",
-          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", "", proxy))
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
         );
         sharesPool = SharesPool(proxy);
         sharesPool.setPoolSharesContract(proxyPoolShares);
@@ -127,7 +127,7 @@ contract SharesRingBufferTest is Test {
         );
         proxyPoolShares = Upgrades.deployUUPSProxy(
           "PoolShares.sol",
-          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", "", proxy))
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
         );
         sharesPool = SharesPool(proxy);
         sharesPool.setPoolSharesContract(proxyPoolShares);

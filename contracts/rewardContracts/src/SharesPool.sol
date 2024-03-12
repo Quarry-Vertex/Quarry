@@ -120,8 +120,12 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         shares = PoolShares(_poolSharesAddress);
     }
 
+    function setQuarryBTCContract(address _quarryBTCAddress) public onlyOwner {
+        quarryBTC = QuarryBTC(_quarryBTCAddress);
+    }
+
     function initialize(address _oracleAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
-        // only deployed address can make changes
+        // Used to limit setting token contract addresses to deploying address
         __Ownable_init(msg.sender);
 
         DIFFICULTY_SCALING = 10**10;
