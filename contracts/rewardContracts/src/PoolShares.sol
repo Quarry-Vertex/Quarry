@@ -25,9 +25,9 @@ contract PoolShares is ERC721Upgradeable, OwnableUpgradeable {
         uint256 indexed tokenId
     );
 
-    function initialize(string memory name, string memory symbol, string memory baseTokenURI) public initializer {
+    function initialize(string memory name, string memory symbol, string memory baseTokenURI, address sharesPoolAddress) public initializer {
         __ERC721_init(name, symbol);
-        __Ownable_init(msg.sender);
+        __Ownable_init(sharesPoolAddress);
 
         _baseTokenURI = baseTokenURI;
     }

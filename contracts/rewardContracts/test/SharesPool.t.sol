@@ -2,6 +2,7 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {PoolShares} from"../src/PoolShares.sol";
 import {SharesPool} from"../src/SharesPool.sol";
 
 import "forge-std/console.sol";
@@ -9,17 +10,24 @@ import "forge-std/console.sol";
 contract SharesPoolTest is Test {
     address oracleAddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // random address for testing
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
+    bytes32 pegInAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
     uint256 testHash = 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7;
 
     SharesPool public sharesPool;
     address public proxy;
+    address public proxyPoolShares;
 
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
             "SharesPool.sol",
-            abi.encodeCall(SharesPool.initialize, (oracleAddress))
+            abi.encodeCall(SharesPool.initialize, (oracleAddress, pegInAddress, 500))
+        );
+        proxyPoolShares = Upgrades.deployUUPSProxy(
+          "PoolShares.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", "", proxy))
         );
         sharesPool = SharesPool(proxy);
+        sharesPool.setPoolSharesContract(proxyPoolShares);
     }
 
     function test_initialChainTip() public {
@@ -89,18 +97,18 @@ contract SharesPoolTest is Test {
         // set initial chain tip
         SharesPool.ChainTip memory initialTip;
         initialTip.previousBlockHash = 0;
-        initialTip.merkleRootHash = txA;
+        initialTip.merkleRootHash = "C";
         sharesPool.setChainTip(initialTip);
         // create a new chain tip
         SharesPool.ChainTip memory newTip;
-        newTip.previousBlockHash = txA;
-        newTip.merkleRootHash = root;
+        newTip.previousBlockHash = "C";
+        newTip.merkleRootHash = "D";
         sharesPool.setChainTip(newTip);
 
         // create a block header
         SharesPool.BlockHeader memory blockHeader;
         blockHeader.version = 10001;
-        blockHeader.previousBlockHash = txAB;
+        blockHeader.previousBlockHash = "D";
         blockHeader.merkleRootHash = root;
         blockHeader.timestamp = 10001;
         blockHeader.bits = 10001;
@@ -108,7 +116,6 @@ contract SharesPoolTest is Test {
 
         // create a block
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        sharesPool.setPegInAddress(outputAddress);
         bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
 
         SharesPool.BitcoinBlock memory curBlock;
@@ -117,7 +124,7 @@ contract SharesPoolTest is Test {
         curBlock.blockReward = blockReward;
 
         // create address
-        address account = address(bytes20(keccak256(abi.encode(block.timestamp))));
+        address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
 
         assertTrue(sharesPool.submitBlock(curBlock, merklePath, account), "block successfully submitted");
 

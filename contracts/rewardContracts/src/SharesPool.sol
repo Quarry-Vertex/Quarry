@@ -7,6 +7,7 @@ import "./lib/SharesRingBuffer.sol";
 import "./lib/SPVProof.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "forge-std/console.sol";
 
@@ -25,7 +26,7 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 
 */
 
-contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
+contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBuffer {
     /*
         Difficulty Threshold Calculation:
         https://bitcoin.stackexchange.com/questions/5556/relationship-between-hash-rate-and-difficulty
@@ -44,11 +45,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
 
     address stratumPool;
     address chainTipOracle;
-    bytes32 public quarryPegInAddress;
-
-    function setPegInAddress(bytes32 pegInAddress) public {
-        quarryPegInAddress = pegInAddress;
-    }
+    bytes32 quarryPegInAddress;
 
     modifier onlyOracle() {
         require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");
@@ -119,13 +116,23 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         return 100;
     }
 
-    function initialize(address _oracleAddress) public initializer {
-        SharesRingBuffer.initialize(SHARES_RING_BUFFER_SIZE);
-        SPVProof.initialize();
+    function setPoolSharesContract(address _poolSharesAddress) public onlyOwner {
+        shares = PoolShares(_poolSharesAddress);
+    }
+
+    function initialize(address _oracleAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
+        // only deployed address can make changes
+        __Ownable_init(msg.sender);
 
         DIFFICULTY_SCALING = 10**10;
         DIFFICULTY_THRESHOLD = 698481272821 * DIFFICULTY_SCALING;
-        SHARES_RING_BUFFER_SIZE = 500;
+        //SHARES_RING_BUFFER_SIZE = 500;
+
+        SharesRingBuffer.initialize(_ringBufferSize);
+        SPVProof.initialize();
+        quarryPegInAddress = _pegInAddress;
+        // need to figure out how to call into the other contract
+        // shares.initialize();
 
         chainTipOracle = _oracleAddress;
         chainTip = ChainTip("", "");
@@ -205,8 +212,10 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         );
 
         // Difficulty of block must be less than the threshold
+        /*
         uint256 difficulty = _calculateDifficulty(_block.header.bits);
         require(difficulty < DIFFICULTY_THRESHOLD*DIFFICULTY_SCALING, "Pool difficulty not met");
+        */
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _block.header.previousBlockHash;
@@ -225,7 +234,7 @@ contract SharesPool is Initializable, SPVProof, SharesRingBuffer {
         uint256 newShareId = shares.awardShare(_account, sharesId++);
         if (ringBufferIsFull()) {
             uint256 burnTokenId = popFromRingBuffer();
-            shares.burnShare(burnTokenId);
+            shares.burnShare(burnTokenId); // fails
         }
         pushToRingBuffer(newShareId);
 
