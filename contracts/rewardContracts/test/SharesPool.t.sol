@@ -78,7 +78,44 @@ contract SharesPoolTest is Test {
         assertEq(difficulty, expectedDifficulty);
     }
 
-    function test_submitBlock() public {
+    function createAndSetChainTip(
+        SharesPool sharesPool,
+        bytes32 previousBlockHash,
+        bytes32 merkleRootHash
+    ) public {
+        SharesPool.ChainTip memory newTip;
+        newTip.previousBlockHash = previousBlockHash;
+        newTip.merkleRootHash = merkleRootHash;
+        sharesPool.setChainTip(newTip);
+    }
+    function createTestBlock(
+        uint32 version,
+        bytes32 previousBlockHash,
+        bytes32 merkleRootHash,
+        uint32 timestamp,
+        uint32 bits,
+        uint32 nonce,
+        bytes32 outputAddress,
+        bytes8 blockReward
+    ) public returns (SharesPool.BitcoinBlock memory) {
+        // create a block header
+        SharesPool.BlockHeader memory blockHeader;
+        blockHeader.version = version;
+        blockHeader.previousBlockHash = previousBlockHash;
+        blockHeader.merkleRootHash = merkleRootHash;
+        blockHeader.timestamp = timestamp;
+        blockHeader.bits = bits;
+        blockHeader.nonce = nonce;
+
+        // create a block
+        SharesPool.BitcoinBlock memory curBlock;
+        curBlock.header = blockHeader;
+        curBlock.outputAddress = outputAddress;
+        curBlock.blockReward = blockReward;
+        return curBlock;
+    }
+
+    function test_submitOneBlock() public {
         vm.startPrank(oracleAddress);
 
         // Example of a valid Merkle path for transaction A in the Merkle tree
@@ -98,35 +135,27 @@ contract SharesPoolTest is Test {
         assertTrue(sharesPool.spvProof(merklePath, root), "Valid SPV proof should pass");
 
         // set initial chain tip
-        SharesPool.ChainTip memory initialTip;
-        initialTip.previousBlockHash = 0;
-        initialTip.merkleRootHash = "C";
-        sharesPool.setChainTip(initialTip);
-        // create a new chain tip
-        SharesPool.ChainTip memory newTip;
-        newTip.previousBlockHash = "C";
-        newTip.merkleRootHash = "D";
-        sharesPool.setChainTip(newTip);
+        createAndSetChainTip(sharesPool, 0, "C");
+        // set current chain tip (for block)
+        createAndSetChainTip(sharesPool, "C", "D");
 
         vm.stopPrank();
 
-        // create a block header
-        SharesPool.BlockHeader memory blockHeader;
-        blockHeader.version = 10001;
-        blockHeader.previousBlockHash = "D";
-        blockHeader.merkleRootHash = root;
-        blockHeader.timestamp = 10001;
-        blockHeader.bits = 0x1b0404cb;
-        blockHeader.nonce = 10001;
-
-        // create a block
+        // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
         bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
 
-        SharesPool.BitcoinBlock memory curBlock;
-        curBlock.header = blockHeader;
-        curBlock.outputAddress = outputAddress;
-        curBlock.blockReward = blockReward;
+        // instantiate a block
+        SharesPool.BitcoinBlock memory curBlock = createTestBlock(
+            10001,          // version
+            "D",            // previousBlockHash
+            root,           // merkleRootHash
+            10001,          // timestamp
+            0x1b0404cb,     // bits
+            10001,          // nonce
+            outputAddress,  // outputAddress
+            blockReward     // blockReward
+        );
 
         // create address
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
@@ -134,6 +163,194 @@ contract SharesPoolTest is Test {
         assertTrue(sharesPool.submitBlock(curBlock, merklePath, account), "block successfully submitted");
         assertEq(poolShares.getOwnerOfShare(0), account, "Owner of share with token id 0");
     }
+
+    function test_submitOneBlockWrongRoot() public {
+        vm.startPrank(oracleAddress);
+
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](2);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+
+        // populate merkle path
+        merklePath[0] = txA; // curhash (hash of the transaction)
+        merklePath[1] = txB;
+
+        // get the root
+        bytes32 root = "incorrect";
+
+        // set initial chain tip
+        createAndSetChainTip(sharesPool, 0, "C");
+        // set current chain tip (for block)
+        createAndSetChainTip(sharesPool, "C", "D");
+
+        // create block params
+        bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+
+        // instantiate a block
+        SharesPool.BitcoinBlock memory curBlock = createTestBlock(
+            10001,          // version
+            "D",            // previousBlockHash
+            root,           // merkleRootHash (wrong)
+            10001,          // timestamp
+            0x1b0404cb,     // bits
+            10001,          // nonce
+            outputAddress,  // outputAddress
+            blockReward     // blockReward
+        );
+
+        // create address
+        address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+
+        vm.expectRevert("SPV proof failed");
+        sharesPool.submitBlock(curBlock, merklePath, account);
+    }
+
+    function test_submitOneBlockWrongTip() public {
+        vm.startPrank(oracleAddress);
+
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](2);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+
+        // populate merkle path
+        merklePath[0] = txA; // curhash (hash of the transaction)
+        merklePath[1] = txB;
+
+        // get the root
+        bytes32 root = txAB;
+
+        // set initial chain tip
+        createAndSetChainTip(sharesPool, 0, "C");
+        // set current chain tip (for block) wrong previous hash
+        createAndSetChainTip(sharesPool, "C", "Wrong");
+
+        // create block params
+        bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+
+        // instantiate a block
+        SharesPool.BitcoinBlock memory curBlock = createTestBlock(
+            10001,          // version
+            "D",            // previousBlockHash
+            root,           // merkleRootHash (wrong)
+            10001,          // timestamp
+            0x1b0404cb,     // bits
+            10001,          // nonce
+            outputAddress,  // outputAddress
+            blockReward     // blockReward
+        );
+
+        // create address
+        address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+
+        vm.expectRevert("Submitted block is stale");
+        sharesPool.submitBlock(curBlock, merklePath, account);
+    }
+
+    function test_submitOneBlockWrongPegTip() public {
+        vm.startPrank(oracleAddress);
+
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](2);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+
+        // populate merkle path
+        merklePath[0] = txA; // curhash (hash of the transaction)
+        merklePath[1] = txB;
+
+        // get the root
+        bytes32 root = txAB;
+
+        // set initial chain tip
+        createAndSetChainTip(sharesPool, 0, "C");
+        // set current chain tip (for block)
+        createAndSetChainTip(sharesPool, "C", "D");
+
+        // create block params
+        // wrong, different from peg in
+        bytes32 outputAddress = bytes32(0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+
+        // instantiate a block
+        SharesPool.BitcoinBlock memory curBlock = createTestBlock(
+            10001,          // version
+            "D",            // previousBlockHash
+            root,           // merkleRootHash (wrong)
+            10001,          // timestamp
+            0x1b0404cb,     // bits
+            10001,          // nonce
+            outputAddress,  // outputAddress
+            blockReward     // blockReward
+        );
+
+        // create address
+        address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+
+        // block should be stale
+        vm.expectRevert("Coinbase transaction does not point to quarry peg in address");
+        sharesPool.submitBlock(curBlock, merklePath, account);
+    }
+
+    /*
+    function test_submitOneBlockLowDifficulty() public {
+        vm.startPrank(oracleAddress);
+
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](2);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+
+        // populate merkle path
+        merklePath[0] = txA; // curhash (hash of the transaction)
+        merklePath[1] = txB;
+
+        // get the root
+        bytes32 root = txAB;
+
+        // set initial chain tip
+        createAndSetChainTip(sharesPool, 0, "C");
+        // set current chain tip (for block)
+        createAndSetChainTip(sharesPool, "C", "D");
+
+        vm.stopPrank();
+
+        // create block params
+        // wrong, different from peg in
+        bytes32 outputAddress = bytes32(0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+
+        // instantiate a block
+        SharesPool.BitcoinBlock memory curBlock = createTestBlock(
+            10001,          // version
+            "D",            // previousBlockHash
+            root,           // merkleRootHash (wrong)
+            10001,          // timestamp
+            0x000000cb,     // bits
+            10001,          // nonce
+            outputAddress,  // outputAddress
+            blockReward     // blockReward
+        );
+
+        // create address
+        address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+
+        sharesPool.submitBlock(curBlock, merklePath, account);
+        // block should be stale
+        // vm.expectRevert("Coinbase transaction does not point to quarry peg in address");
+    }
+    */
 
     // function test_distributeRewards() public {
 
