@@ -216,10 +216,9 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         );
 
         // Difficulty of block must be less than the threshold
-        /*
         uint256 difficulty = _calculateDifficulty(_block.header.bits);
-        require(difficulty < DIFFICULTY_THRESHOLD*DIFFICULTY_SCALING, "Pool difficulty not met");
-        */
+        require(difficulty < DIFFICULTY_THRESHOLD * DIFFICULTY_SCALING, "Pool difficulty not met");
+
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _block.header.previousBlockHash;

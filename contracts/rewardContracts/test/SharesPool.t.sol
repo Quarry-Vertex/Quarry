@@ -15,6 +15,9 @@ contract SharesPoolTest is Test {
     uint256 testHash = 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7;
 
     SharesPool public sharesPool;
+    PoolShares public poolShares;
+    QuarryBTC public quarryBTC;
+
     address public proxy;
     address public proxyPoolShares;
     address public proxyQuarryBTC;
@@ -36,6 +39,8 @@ contract SharesPoolTest is Test {
         );
 
         sharesPool = SharesPool(proxy);
+        poolShares = PoolShares(proxyPoolShares);
+        quarryBTC = QuarryBTC(proxyQuarryBTC);
         sharesPool.setPoolSharesContract(proxyPoolShares);
         sharesPool.setQuarryBTCContract(proxyQuarryBTC);
     }
@@ -103,13 +108,15 @@ contract SharesPoolTest is Test {
         newTip.merkleRootHash = "D";
         sharesPool.setChainTip(newTip);
 
+        vm.stopPrank();
+
         // create a block header
         SharesPool.BlockHeader memory blockHeader;
         blockHeader.version = 10001;
         blockHeader.previousBlockHash = "D";
         blockHeader.merkleRootHash = root;
         blockHeader.timestamp = 10001;
-        blockHeader.bits = 10001;
+        blockHeader.bits = 0x1b0404cb;
         blockHeader.nonce = 10001;
 
         // create a block
@@ -125,8 +132,7 @@ contract SharesPoolTest is Test {
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
 
         assertTrue(sharesPool.submitBlock(curBlock, merklePath, account), "block successfully submitted");
-
-        vm.stopPrank();
+        assertEq(poolShares.getOwnerOfShare(0), account, "Owner of share with token id 0");
     }
 
     // function test_distributeRewards() public {
