@@ -5,6 +5,8 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {SharesPool} from"../../src/SharesPool.sol";
 import {PoolShares} from"../../src/PoolShares.sol";
 
+import "forge-std/console.sol";
+
 contract SharesRingBufferTest is Test {
     address oracleAddress = address(bytes20(keccak256(abi.encode(block.timestamp)))); // random address for testing
     address stratumPoolAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
@@ -149,5 +151,35 @@ contract SharesRingBufferTest is Test {
 
         vm.expectRevert("Buffer is empty");
         sharesPool.popFromRingBuffer();
+    }
+
+    function test_partiallyPopulatedBuffer() public {
+        proxy = Upgrades.deployUUPSProxy(
+            "SharesPool.sol",
+            abi.encodeCall(SharesPool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 10))
+        );
+        proxyPoolShares = Upgrades.deployUUPSProxy(
+          "PoolShares.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
+        );
+        sharesPool = SharesPool(proxy);
+        sharesPool.setPoolSharesContract(proxyPoolShares);
+
+        // no pushed shares
+        assertTrue(sharesPool.numSharesInRingBuffer() == 0, "Ring buffer size starts at 0");
+        assertTrue(sharesPool.ringBufferIsEmpty(), "Ring buffer is empty");
+
+        // add 5 shares
+        for(uint64 i = 0; i < 5; i++) {
+            sharesPool.pushToRingBuffer(i);
+        }
+        assertTrue(sharesPool.numSharesInRingBuffer() == 5, "5 elements added");
+
+        // pop all added shares
+        while(!sharesPool.ringBufferIsEmpty()) {
+            sharesPool.popFromRingBuffer();
+        }
+
+        assertTrue(sharesPool.ringBufferIsEmpty(), "Ring buffer is empty");
     }
 }
