@@ -43,7 +43,7 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
 
     uint256 SHARES_RING_BUFFER_SIZE; // TODO: Set sharesRingBuffer size to correct value
 
-    address stratumPool;
+    address stratumPoolAddress;
     address chainTipOracle;
     bytes32 quarryPegInAddress;
 
@@ -53,7 +53,7 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
     }
 
     modifier onlyStratumPool() {
-        require(msg.sender == stratumPool, "Only the stratumPool can call this method");
+        require(msg.sender == stratumPoolAddress, "Only the stratumPool can call this method");
         _;
     }
 
@@ -124,25 +124,23 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         quarryBTC = QuarryBTC(_quarryBTCAddress);
     }
 
-    function initialize(address _oracleAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
+    function initialize(address _oracleAddress, address _stratumPoolAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
         // Used to limit setting token contract addresses to deploying address
         __Ownable_init(msg.sender);
 
         DIFFICULTY_SCALING = 10**10;
         DIFFICULTY_THRESHOLD = 698481272821 * DIFFICULTY_SCALING;
-        //SHARES_RING_BUFFER_SIZE = 500;
 
         SharesRingBuffer.initialize(_ringBufferSize);
         SPVProof.initialize();
-        quarryPegInAddress = _pegInAddress;
-        // need to figure out how to call into the other contract
-        // shares.initialize();
 
         chainTipOracle = _oracleAddress;
+        stratumPoolAddress = _stratumPoolAddress;
+        quarryPegInAddress = _pegInAddress;
+
         chainTip = ChainTip("", "");
         sharesId = 0;
 
-        // TODO: need to set quarryPegInAddress and stratumPool
     }
 
     function setChainTip(ChainTip memory _chainTip) public onlyOracle {
@@ -239,6 +237,8 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
             shares.burnShare(burnTokenId); // fails
         }
         pushToRingBuffer(newShareId);
+
+        confirmations[blockHash] = 0;
 
         emit BlockRevealed(_block.header.merkleRootHash, _account);
 
