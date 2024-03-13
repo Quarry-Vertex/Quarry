@@ -41,8 +41,6 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
     uint256 DIFFICULTY_THRESHOLD;
     uint256 DIFFICULTY_SCALING;
 
-    uint256 SHARES_RING_BUFFER_SIZE; // TODO: Set sharesRingBuffer size to correct value
-
     address stratumPoolAddress;
     address chainTipOracle;
     bytes32 quarryPegInAddress;
@@ -253,7 +251,7 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         uint256 numShares = numSharesInRingBuffer();
         bytes8 blockReward = _block.blockReward;
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
-        while (ringBufferIsEmpty()) {
+        while (!ringBufferIsEmpty()) {
             uint256 burnTokenId = popFromRingBuffer();
             address shareOwner = shares.getOwnerOfShare(burnTokenId);
             quarryBTC.mintQuarryBTC(shareOwner, blockRewardPerShare);

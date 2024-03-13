@@ -142,7 +142,7 @@ contract SharesPoolTest is Test {
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+        bytes8 blockReward = bytes8(uint64(50000));
 
         // instantiate a block
         SharesPool.BitcoinBlock memory curBlock = createTestBlock(
@@ -183,7 +183,7 @@ contract SharesPoolTest is Test {
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+        bytes8 blockReward = bytes8(uint64(50000));
 
         // instantiate a block
         SharesPool.BitcoinBlock memory curBlock = createTestBlock(
@@ -225,7 +225,7 @@ contract SharesPoolTest is Test {
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+        bytes8 blockReward = bytes8(uint64(50000));
 
         // instantiate a block
         SharesPool.BitcoinBlock memory curBlock = createTestBlock(
@@ -268,7 +268,7 @@ contract SharesPoolTest is Test {
         // create block params
         // wrong, different from peg in
         bytes32 outputAddress = bytes32(0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+        bytes8 blockReward = bytes8(uint64(50000));
 
         // instantiate a block
         SharesPool.BitcoinBlock memory curBlock = createTestBlock(
@@ -309,7 +309,7 @@ contract SharesPoolTest is Test {
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+        bytes8 blockReward = bytes8(uint64(50000));
         // create address
         address account1 = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
         address account2 = (0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC);
@@ -345,8 +345,19 @@ contract SharesPoolTest is Test {
             abi.encodeCall(SharesPool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 2))
         );
 
-        sharesPool = SharesPool(proxy);
+        proxyPoolShares = Upgrades.deployUUPSProxy(
+          "PoolShares.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
+        );
 
+        proxyQuarryBTC = Upgrades.deployUUPSProxy(
+          "QuarryBTC.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryBTC", "QBTC", proxy))
+        );
+
+        sharesPool = SharesPool(proxy);
+        poolShares = PoolShares(proxyPoolShares);
+        quarryBTC = QuarryBTC(proxyQuarryBTC);
         sharesPool.setPoolSharesContract(proxyPoolShares);
         sharesPool.setQuarryBTCContract(proxyQuarryBTC);
         vm.startPrank(oracleAddress);
@@ -370,7 +381,7 @@ contract SharesPoolTest is Test {
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        bytes8 blockReward = bytes8(bytes32(uint256(0x12345678)));
+        bytes8 blockReward = bytes8(uint64(50000));
         // create address
         address account1 = address(bytes20(keccak256(abi.encode(block.timestamp + 300))));
         address account2 = address(bytes20(keccak256(abi.encode(block.timestamp + 400))));
@@ -446,9 +457,19 @@ contract SharesPoolTest is Test {
             "SharesPool.sol",
             abi.encodeCall(SharesPool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 5))
         );
+        proxyPoolShares = Upgrades.deployUUPSProxy(
+          "PoolShares.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
+        );
+
+        proxyQuarryBTC = Upgrades.deployUUPSProxy(
+          "QuarryBTC.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryBTC", "QBTC", proxy))
+        );
 
         sharesPool = SharesPool(proxy);
-
+        poolShares = PoolShares(proxyPoolShares);
+        quarryBTC = QuarryBTC(proxyQuarryBTC);
         sharesPool.setPoolSharesContract(proxyPoolShares);
         sharesPool.setQuarryBTCContract(proxyQuarryBTC);
         vm.startPrank(oracleAddress);
@@ -472,7 +493,7 @@ contract SharesPoolTest is Test {
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
-        bytes8 blockReward = bytes8(bytes32(uint256(50000)));
+        bytes8 blockReward = bytes8(uint64(50000));
         // create address
         address account1 = address(bytes20(keccak256(abi.encode(block.timestamp + 300))));
         address account2 = address(bytes20(keccak256(abi.encode(block.timestamp + 400))));
@@ -596,11 +617,11 @@ contract SharesPoolTest is Test {
         assertEq(quarryBTC.getBalanceOf(account1), 0, "address1 should not have been rewarded any QBTC");
         assertEq(quarryBTC.getBalanceOf(account2), 0, "address2 should not have been rewarded any QBTC");
 
-        assertEq(quarryBTC.getBalanceOf(account3), 1000, "address3 should have been rewarded 1000 QBTC");
-        assertEq(quarryBTC.getBalanceOf(account4), 1000, "address3 should have been rewarded 1000 QBTC");
-        assertEq(quarryBTC.getBalanceOf(account5), 1000, "address3 should have been rewarded 1000 QBTC");
-        assertEq(quarryBTC.getBalanceOf(account6), 1000, "address3 should have been rewarded 1000 QBTC");
-        assertEq(quarryBTC.getBalanceOf(account7), 1000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account3), 10000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account4), 10000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account5), 10000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account6), 10000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account7), 10000, "address3 should have been rewarded 1000 QBTC");
 
         assertFalse(poolShares.tokenExists(0), "Token id 0 should have been burned");
         assertFalse(poolShares.tokenExists(1), "Token id 1 should have been burned");
