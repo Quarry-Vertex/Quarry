@@ -631,4 +631,182 @@ contract SharesPoolTest is Test {
         assertFalse(poolShares.tokenExists(5), "Token id 5 should have been burned");
         assertFalse(poolShares.tokenExists(6), "Token id 6 should have been burned");
     }
+
+    function test_distributeRewardsMultSubmissions() public {
+        proxy = Upgrades.deployUUPSProxy(
+            "SharesPool.sol",
+            abi.encodeCall(SharesPool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 5))
+        );
+        proxyPoolShares = Upgrades.deployUUPSProxy(
+          "PoolShares.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
+        );
+
+        proxyQuarryBTC = Upgrades.deployUUPSProxy(
+          "QuarryBTC.sol",
+          abi.encodeCall(PoolShares.initialize, ("QuarryBTC", "QBTC", proxy))
+        );
+
+        sharesPool = SharesPool(proxy);
+        poolShares = PoolShares(proxyPoolShares);
+        quarryBTC = QuarryBTC(proxyQuarryBTC);
+        sharesPool.setPoolSharesContract(proxyPoolShares);
+        sharesPool.setQuarryBTCContract(proxyQuarryBTC);
+        vm.startPrank(oracleAddress);
+
+        // Example of a valid Merkle path for transaction A in the Merkle tree
+        bytes32[] memory merklePath = new bytes32[](2);
+        // create transaction hashes in merkle path
+        bytes32 txA = "A";
+        bytes32 txB = "B";
+        bytes32 txAB = sha256(abi.encodePacked(sha256(abi.encodePacked(txA, txB))));
+
+        // populate merkle path
+        merklePath[0] = txA; // curhash (hash of the transaction)
+        merklePath[1] = txB;
+
+        // get the root
+        bytes32 root = txAB;
+
+        // set initial chain tip
+        createAndSetChainTip(0, "C");
+
+        // create block params
+        bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        bytes8 blockReward = bytes8(uint64(50000));
+        // create address
+        address account1 = address(bytes20(keccak256(abi.encode(block.timestamp + 300))));
+        address account2 = address(bytes20(keccak256(abi.encode(block.timestamp + 400))));
+        address account3 = address(bytes20(keccak256(abi.encode(block.timestamp + 500))));
+        address account4 = address(bytes20(keccak256(abi.encode(block.timestamp + 600))));
+        address account5 = address(bytes20(keccak256(abi.encode(block.timestamp + 700))));
+        address account6 = address(bytes20(keccak256(abi.encode(block.timestamp + 900))));
+
+        // block 1
+        SharesPool.BitcoinBlock memory block1 = createTestBlock(
+            "D",            // previousBlockHash
+            root,           // merkleRootHash
+            0x1b0404cb,     // bits
+            outputAddress,  // outputAddress
+            blockReward     // blockReward
+        );
+        createAndSetChainTip("C", "D");
+        assertTrue(sharesPool.submitBlock(block1, merklePath, account1), "block 1 submitted");
+
+        // create transaction hashes in merkle path
+        bytes32 txC = "C";
+        bytes32 txD = "D";
+        bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
+
+        // populate merkle path
+        merklePath[0] = txC; // curhash (hash of the transaction)
+        merklePath[1] = txD;
+
+        // get the root
+        root = txCD;
+
+        // block 2
+        SharesPool.BitcoinBlock memory block2 = createTestBlock(
+            "E", root,  0x1b0404cb, outputAddress, blockReward
+        );
+        createAndSetChainTip("D", "E");
+        assertTrue(sharesPool.submitBlock(block2, merklePath, account2), "block2 submitted");
+
+        assertEq(poolShares.getOwnerOfShare(0), account1, "Owner of share with token id 0");
+        assertEq(poolShares.getOwnerOfShare(1), account2, "Owner of share with token id 1");
+
+        // create transaction hashes in merkle path
+        bytes32 txE = "E";
+        bytes32 txF = "F";
+        bytes32 txEF = sha256(abi.encodePacked(sha256(abi.encodePacked(txE, txF))));
+
+        // populate merkle path
+        merklePath[0] = txE; // curhash (hash of the transaction)
+        merklePath[1] = txF;
+
+        // get the root
+        root = txEF;
+
+        // block 3
+        SharesPool.BitcoinBlock memory block3 = createTestBlock(
+            "F", root, 0x1b0404cb, outputAddress, blockReward
+        );
+        createAndSetChainTip("E", "F");
+        sharesPool.submitBlock(block3, merklePath, account3);
+
+        // block 4
+        bytes32 txG = "G";
+        bytes32 txH = "H";
+        bytes32 txGH = sha256(abi.encodePacked(sha256(abi.encodePacked(txG, txH))));
+        merklePath[0] = txG;
+        merklePath[1] = txH;
+        root = txGH;
+        SharesPool.BitcoinBlock memory block4 = createTestBlock(
+            "G", root, 0x1b0404cb, outputAddress, blockReward
+        );
+        createAndSetChainTip("F", "G");
+        assertTrue(sharesPool.submitBlock(block4, merklePath, account4), "block 4 submitted");
+
+        // block 5
+        bytes32 txI = "I";
+        bytes32 txJ = "J";
+        bytes32 txIJ = sha256(abi.encodePacked(sha256(abi.encodePacked(txI, txJ))));
+        merklePath[0] = txI;
+        merklePath[1] = txJ;
+        root = txIJ;
+        SharesPool.BitcoinBlock memory block5 = createTestBlock(
+            "H", root, 0x1b0404cb, outputAddress, blockReward
+        );
+        createAndSetChainTip("G", "H");
+        assertTrue(sharesPool.submitBlock(block5, merklePath, account5), "block 5 submitted");
+
+        // block 6
+        bytes32 txK = "K";
+        bytes32 txL = "L";
+        bytes32 txKL = sha256(abi.encodePacked(sha256(abi.encodePacked(txK, txL))));
+        merklePath[0] = txK;
+        merklePath[1] = txL;
+        root = txKL;
+        SharesPool.BitcoinBlock memory block6 = createTestBlock(
+            "I", root, 0x1b0404cb, outputAddress, blockReward
+        );
+        createAndSetChainTip("H", "I");
+        assertTrue(sharesPool.submitBlock(block6, merklePath, account6), "block 6 submitted");
+
+        // block 7
+        bytes32 txM = "M";
+        bytes32 txN = "N";
+        bytes32 txMN = sha256(abi.encodePacked(sha256(abi.encodePacked(txM, txN))));
+        merklePath[0] = txM;
+        merklePath[1] = txN;
+        root = txMN;
+        SharesPool.BitcoinBlock memory block7 = createTestBlock(
+            "J", root, 0x1b0404cb, outputAddress, blockReward
+        );
+        createAndSetChainTip("I", "J");
+        assertTrue(sharesPool.submitBlock(block7, merklePath, account3), "block 7 submitted");
+
+        vm.stopPrank();
+
+        // Expect 1000 to be distributed to addresses 3-7
+        // because 1 and 2 got evicted from the ring buffer
+        vm.prank(stratumPoolAddress);
+        sharesPool.distributeRewards(block1);
+
+        assertEq(quarryBTC.getBalanceOf(account1), 0, "address1 should not have been rewarded any QBTC");
+        assertEq(quarryBTC.getBalanceOf(account2), 0, "address2 should not have been rewarded any QBTC");
+
+        assertEq(quarryBTC.getBalanceOf(account3), 20000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account4), 10000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account5), 10000, "address3 should have been rewarded 1000 QBTC");
+        assertEq(quarryBTC.getBalanceOf(account6), 10000, "address3 should have been rewarded 1000 QBTC");
+
+        assertFalse(poolShares.tokenExists(0), "Token id 0 should have been burned");
+        assertFalse(poolShares.tokenExists(1), "Token id 1 should have been burned");
+        assertFalse(poolShares.tokenExists(2), "Token id 2 should have been burned");
+        assertFalse(poolShares.tokenExists(3), "Token id 3 should have been burned");
+        assertFalse(poolShares.tokenExists(4), "Token id 4 should have been burned");
+        assertFalse(poolShares.tokenExists(5), "Token id 5 should have been burned");
+        assertFalse(poolShares.tokenExists(6), "Token id 6 should have been burned");
+    }
 }
