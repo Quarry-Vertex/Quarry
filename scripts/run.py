@@ -39,24 +39,21 @@ def forge_build(args):
 
 # test a smart contract
 def forge_test(args):
-    # move to the foundry project
-    os.chdir("contracts/" + args.contract)
-    # process to get "upgradable" tests working
-    subprocess.run(["forge", "clean"]) # clean
-    subprocess.run(["forge", "build"]) # rebuild
-    subprocess.run(["forge", "test", "--ffi", "-vv"]) # test with ffi
-    os.chdir("../..")
+    os.chdir("scripts/")
+    subprocess.run(["./testScript.sh"])
+    os.chdir("../")
 
 
 # generate contract ABI
 def contract_gen_abi(args):
     # move to the foundry project
-    os.chdir(f"contracts/{args.contract}/out/{args.out}.sol")
+    os.chdir(f"contracts/{args.contract}/out/{args.out}.sol/")
     # Open the output file
     with open(f"{args.out}Abi.json", "w") as output_file:
         # Run the jq command and redirect stdout to the output file
         subprocess.run(["jq", ".abi", f"{args.out}.json"], stdout=output_file)
     os.chdir("../../../../")
+
 
 # deploy the smart contract with presets
 def contract_default_deploy(args):
@@ -125,9 +122,7 @@ def main():
     )
 
     # generate abi
-    abi_gen_parser = forge_subparsers.add_parser(
-        "abi", help="generate contract abi"
-    )
+    abi_gen_parser = forge_subparsers.add_parser("abi", help="generate contract abi")
     abi_gen_parser.set_defaults(func=contract_gen_abi)
     abi_gen_parser.add_argument(
         "-c", "--contract", required=True, help="contract project to generate"
@@ -149,9 +144,6 @@ def main():
         "test", help="build the smart contracts"
     )
     forge_test_parser.set_defaults(func=forge_test)
-    forge_test_parser.add_argument(
-        "-c", "--contract", required=True, help="contract project to test"
-    )
 
     # forge default deploy
     forge_default_deploy = forge_subparsers.add_parser(
