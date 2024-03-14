@@ -24,8 +24,8 @@ contract qbtcTest is Test {
         );
 
         proxyqbtc = Upgrades.deployUUPSProxy(
-            "qbtc.sol",
-            abi.encodeCall(qbtc.initialize, ("Quarry", "qbtc", proxy))
+            "QBTC.sol",
+            abi.encodeCall(qbtc.initialize, ("Quarry", "QBTC", proxy))
         );
 
         qbtc = QBTC(proxyqbtc);
