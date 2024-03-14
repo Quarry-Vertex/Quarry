@@ -1,1 +1,7 @@
-forge create --rpc-url https://eth-sepolia.g.alchemy.com/v2/LcYLSe1fjqMF0g_p4tWPxMIFfyWJb1jK --private-key 0x6d2e414bff5bdc7dc6705eb5bcd858bf311106d4030599e8ede25d41927d0bf3 src/PoolShares.sol:PoolShares --constructor-args "0xcCaCB37A575EF02C7108d23F8579732204CB4030" "Quarry" "QRY" ""
+forge create SharesPool --via-ir \
+  --interactive \
+  --constructor-args \
+  "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" \
+  "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" \
+  "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" \
+  "100"
