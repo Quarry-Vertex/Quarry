@@ -2,7 +2,7 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {QBTC} from"../src/qbtc.sol";
+import {QBTC} from"../src/QBTC.sol";
 import {Pool} from"../src/Pool.sol";
 
 import "forge-std/console.sol";
