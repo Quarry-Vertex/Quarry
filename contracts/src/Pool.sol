@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./PoolShares.sol";
-import "./QuarryBTC.sol";
-import "./lib/SharesRingBuffer.sol";
+import "./Share.sol";
+import "./QBTC.sol";
+import "./lib/RingBuffer.sol";
 import "./lib/SPVProof.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -26,7 +26,7 @@ Stratum Mining Pool     -->             SharesPool          <--             Bloc
 
 */
 
-contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBuffer {
+contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     /*
         Difficulty Threshold Calculation:
         https://bitcoin.stackexchange.com/questions/5556/relationship-between-hash-rate-and-difficulty
@@ -55,10 +55,10 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         _;
     }
 
-    PoolShares shares; // Shares NFT instance
+    Share shares; // Shares NFT instance
     uint256 sharesId;
 
-    QuarryBTC quarryBTC; // synthetic BTC
+    QBTC qbtc; // synthetic BTC
 
     mapping(bytes32 => uint8) public confirmations; // tracks number of confirmations for each block hash
     bytes32[] blocks; // list of block hashes from setChainTip
@@ -114,12 +114,12 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         return 100;
     }
 
-    function setPoolSharesContract(address _poolSharesAddress) public onlyOwner {
-        shares = PoolShares(_poolSharesAddress);
+    function setShareContract(address _poolSharesAddress) public onlyOwner {
+        shares = Share(_poolSharesAddress);
     }
 
-    function setQuarryBTCContract(address _quarryBTCAddress) public onlyOwner {
-        quarryBTC = QuarryBTC(_quarryBTCAddress);
+    function setQBTCContract(address _qbtcAddress) public onlyOwner {
+        qbtc = QBTC(_qbtcAddress);
     }
 
     function initialize(address _oracleAddress, address _stratumPoolAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
@@ -129,7 +129,7 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         DIFFICULTY_SCALING = 10**10;
         DIFFICULTY_THRESHOLD = 698481272821 * DIFFICULTY_SCALING;
 
-        SharesRingBuffer.initialize(_ringBufferSize);
+        RingBuffer.initialize(_ringBufferSize);
         SPVProof.initialize();
 
         chainTipOracle = _oracleAddress;
@@ -229,10 +229,10 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         usedBlockHashes[blockHash] = true;
 
         // All checks pass, credit user with share
-        uint256 newShareId = shares.awardShare(_account, sharesId++);
+        uint256 newShareId = shares.mint(_account, sharesId++);
         if (ringBufferIsFull()) {
             uint256 burnTokenId = popFromRingBuffer();
-            shares.burnShare(burnTokenId); // fails
+            shares.burn(burnTokenId); // fails
         }
         pushToRingBuffer(newShareId);
 
@@ -253,9 +253,9 @@ contract SharesPool is Initializable, OwnableUpgradeable, SPVProof, SharesRingBu
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
         while (!ringBufferIsEmpty()) {
             uint256 burnTokenId = popFromRingBuffer();
-            address shareOwner = shares.getOwnerOfShare(burnTokenId);
-            quarryBTC.mintQuarryBTC(shareOwner, blockRewardPerShare);
-            shares.burnShare(burnTokenId);
+            address shareOwner = shares.ownerOf(burnTokenId);
+            qbtc.mint(shareOwner, blockRewardPerShare);
+            shares.burn(burnTokenId);
         }
 
         emit RewardsDistributed(_block.header.merkleRootHash);

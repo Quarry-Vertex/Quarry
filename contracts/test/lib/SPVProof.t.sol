@@ -2,8 +2,8 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {SharesPool} from"../../src/SharesPool.sol";
-import {PoolShares} from"../../src/PoolShares.sol";
+import {Pool} from"../../src/Pool.sol";
+import {Share} from"../../src/Share.sol";
 import "forge-std/console.sol";
 
 contract SPVProofTest is Test {
@@ -23,21 +23,21 @@ contract SPVProofTest is Test {
     bytes32 pegInAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
     uint256 testHash = 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7;
 
-    SharesPool public sharesPool;
+    Pool public pool;
     address public proxy;
-    address public proxyPoolShares;
+    address public proxyShare;
 
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
-            "SharesPool.sol",
-            abi.encodeCall(SharesPool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 500))
+            "Pool.sol",
+            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 500))
         );
-        proxyPoolShares = Upgrades.deployUUPSProxy(
-          "PoolShares.sol",
-          abi.encodeCall(PoolShares.initialize, ("QuarryShares", "QShare", proxy))
+        proxyShare = Upgrades.deployUUPSProxy(
+          "Share.sol",
+          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
         );
-        sharesPool = SharesPool(proxy);
-        sharesPool.setPoolSharesContract(proxyPoolShares);
+        pool = Pool(proxy);
+        pool.setShareContract(proxyShare);
     }
 
     /*
@@ -64,7 +64,7 @@ contract SPVProofTest is Test {
         // get the root
         bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-        assertTrue(sharesPool.spvProof(merklePath, root), "Valid SPV proof should pass");
+        assertTrue(pool.spvProof(merklePath, root), "Valid SPV proof should pass");
     }
 
     // Starting at Transaction B
@@ -87,7 +87,7 @@ contract SPVProofTest is Test {
         // get the root
         bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-        assertTrue(sharesPool.spvProof(merklePath, root), "Valid SPV proof should pass");
+        assertTrue(pool.spvProof(merklePath, root), "Valid SPV proof should pass");
     }
 
     // Starting at Transaction C
@@ -110,7 +110,7 @@ contract SPVProofTest is Test {
         // get the root
         bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-        assertTrue(sharesPool.spvProof(merklePath, root), "Valid SPV proof should pass");
+        assertTrue(pool.spvProof(merklePath, root), "Valid SPV proof should pass");
     }
 
     // Starting at Transaction D
@@ -133,7 +133,7 @@ contract SPVProofTest is Test {
         // get the root
         bytes32 root = sha256(abi.encodePacked(sha256(abi.encodePacked(txAB, txCD))));
 
-        assertTrue(sharesPool.spvProof(merklePath, root), "Valid SPV proof should pass");
+        assertTrue(pool.spvProof(merklePath, root), "Valid SPV proof should pass");
     }
 
     /*
@@ -159,7 +159,7 @@ contract SPVProofTest is Test {
         // get the root (order matters)
         bytes32 wrongRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(txCD, txAB))));
         vm.expectRevert("SPV proof failed");
-        sharesPool.spvProof(merklePath, wrongRoot);
+        pool.spvProof(merklePath, wrongRoot);
     }
 
     function test_FromCFails() public {
@@ -181,7 +181,7 @@ contract SPVProofTest is Test {
         // get the root (order matters)
         bytes32 wrongRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(txCD, txAB))));
         vm.expectRevert("SPV proof failed");
-        sharesPool.spvProof(merklePath, wrongRoot);
+        pool.spvProof(merklePath, wrongRoot);
     }
 
 }
