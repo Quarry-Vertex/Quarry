@@ -9,7 +9,6 @@ import "forge-std/console.sol";
 
 contract ShareTest is Test {
     address oracleAddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // random address for testing
-    address stratumPoolAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
     bytes32 pegInAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
     address testAddress2 = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
@@ -21,7 +20,7 @@ contract ShareTest is Test {
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 500))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
         );
 
         proxyShare = Upgrades.deployUUPSProxy(

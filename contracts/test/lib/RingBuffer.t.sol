@@ -9,7 +9,6 @@ import "forge-std/console.sol";
 
 contract SharesRingBufferTest is Test {
     address oracleAddress = address(bytes20(keccak256(abi.encode(block.timestamp)))); // random address for testing
-    address stratumPoolAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
     bytes32 pegInAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
     uint256 testHash = 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7;
@@ -25,7 +24,7 @@ contract SharesRingBufferTest is Test {
         uint256 size = 0;
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, size))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, size))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
@@ -44,7 +43,7 @@ contract SharesRingBufferTest is Test {
     function test_populatedBuffer() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 10))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
@@ -85,7 +84,7 @@ contract SharesRingBufferTest is Test {
     function test_overflow() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 10))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
@@ -126,7 +125,7 @@ contract SharesRingBufferTest is Test {
     function test_popFromEmpty() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 10))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
@@ -156,7 +155,7 @@ contract SharesRingBufferTest is Test {
     function test_partiallyPopulatedBuffer() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 10))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",

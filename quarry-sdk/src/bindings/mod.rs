@@ -6,4 +6,3 @@
 pub mod pool;
 pub mod qbtc;
 pub mod share;
-pub mod shared_types;

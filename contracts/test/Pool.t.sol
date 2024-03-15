@@ -11,7 +11,6 @@ import "forge-std/console.sol";
 contract PoolTest is Test {
     address oracleAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
-    address stratumPoolAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 200))));
     bytes32 pegInAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
     uint256 testHash = 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7;
 
@@ -61,7 +60,7 @@ contract PoolTest is Test {
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 500))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
         );
 
         proxyShare = Upgrades.deployUUPSProxy(
@@ -342,7 +341,7 @@ contract PoolTest is Test {
     function test_submitMultipleBlocks() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 2))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 2))
         );
 
         proxyShare = Upgrades.deployUUPSProxy(
@@ -455,7 +454,7 @@ contract PoolTest is Test {
     function test_distributeRewards() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 5))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 5))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
@@ -611,7 +610,6 @@ contract PoolTest is Test {
 
         // Expect 1000 to be distributed to addresses 3-7
         // because 1 and 2 got evicted from the ring buffer
-        vm.prank(stratumPoolAddress);
         pool.distributeRewards(block1);
 
         assertEq(qbtc.balanceOf(account1), 0, "address1 should not have been rewarded any QBTC");
@@ -635,7 +633,7 @@ contract PoolTest is Test {
     function test_distributeRewardsMultSubmissions() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 5))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 5))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
@@ -790,7 +788,6 @@ contract PoolTest is Test {
 
         // Expect 1000 to be distributed to addresses 3-7
         // because 1 and 2 got evicted from the ring buffer
-        vm.prank(stratumPoolAddress);
         pool.distributeRewards(block1);
 
         assertEq(qbtc.balanceOf(account1), 0, "address1 should not have been rewarded any QBTC");

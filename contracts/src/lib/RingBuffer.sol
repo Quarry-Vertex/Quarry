@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 // Queue to track token ids for PPLNS
-abstract contract RingBuffer is Initializable {
+abstract contract RingBuffer {
     uint256 public bufferSize;   // Maximum size of the ring buffer
     uint256 public currSize;     // Current number of elements in the buffer
     uint256 public start;        // Index of first element
@@ -21,7 +21,7 @@ abstract contract RingBuffer is Initializable {
         uint256 position
     );
 
-    function initialize(uint256 _bufferSize) public initializer {//onlyInitializing {
+    function _initializeRingBuffer(uint256 _bufferSize) internal {//onlyInitializing {
         bufferSize = _bufferSize;
         buffer = new uint256[](bufferSize);
         currSize = 0;

@@ -41,17 +41,11 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     uint256 DIFFICULTY_THRESHOLD;
     uint256 DIFFICULTY_SCALING;
 
-    address stratumPoolAddress;
     address chainTipOracle;
     bytes32 quarryPegInAddress;
 
     modifier onlyOracle() {
         require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");
-        _;
-    }
-
-    modifier onlyStratumPool() {
-        require(msg.sender == stratumPoolAddress, "Only the stratumPool can call this method");
         _;
     }
 
@@ -110,30 +104,24 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         bytes8 blockReward;
     }
 
-    function getOneHundred() public view returns (uint256) {
-        return 100;
-    }
-
-    function setShareContract(address _poolSharesAddress) public onlyOwner {
-        shares = Share(_poolSharesAddress);
+    function setShareContract(address _shares) public onlyOwner {
+        shares = Share(_shares);
     }
 
     function setQBTCContract(address _qbtcAddress) public onlyOwner {
         qbtc = QBTC(_qbtcAddress);
     }
 
-    function initialize(address _oracleAddress, address _stratumPoolAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
+    function initialize(address _oracleAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
         // Used to limit setting token contract addresses to deploying address
         __Ownable_init(msg.sender);
 
         DIFFICULTY_SCALING = 10**10;
         DIFFICULTY_THRESHOLD = 698481272821 * DIFFICULTY_SCALING;
 
-        RingBuffer.initialize(_ringBufferSize);
-        SPVProof.initialize();
+        _initializeRingBuffer(_ringBufferSize);
 
         chainTipOracle = _oracleAddress;
-        stratumPoolAddress = _stratumPoolAddress;
         quarryPegInAddress = _pegInAddress;
 
         chainTip = ChainTip("", "");
@@ -245,7 +233,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
     // Clears out all shares and distributes rewards prorata to addresses
     // This function should be called by the Stratum mining pool when blocks are won
-    function distributeRewards(BitcoinBlock memory _block) public onlyStratumPool returns (bool success) {
+    function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
         uint256 numShares = numSharesInRingBuffer();

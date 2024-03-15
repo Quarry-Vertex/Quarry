@@ -10,7 +10,6 @@ import "forge-std/console.sol";
 contract qbtcTest is Test {
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
     address oracleAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
-    address stratumPoolAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 200))));
     bytes32 pegInAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
 
     QBTC public qbtc;
@@ -20,7 +19,7 @@ contract qbtcTest is Test {
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 500))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
         );
 
         proxyqbtc = Upgrades.deployUUPSProxy(

@@ -18,7 +18,6 @@ contract SPVProofTest is Test {
 
     // initialize contract object
     address oracleAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
-    address stratumPoolAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 200))));
     bytes32 pegInAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
     uint256 testHash = 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7;
@@ -30,7 +29,7 @@ contract SPVProofTest is Test {
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
             "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, stratumPoolAddress, pegInAddress, 500))
+            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
         );
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",

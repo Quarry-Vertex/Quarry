@@ -9,9 +9,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 // Synthetic BTC on Quarry TODO: Figure out token metadata, URI
 contract QBTC is ERC20Upgradeable, OwnableUpgradeable {
-    function initialize(string memory name, string memory symbol, address sharesPoolAddress) public initializer {
+    function initialize(string memory name, string memory symbol, address pool) public initializer {
         __ERC20_init(name, symbol);
-        __Ownable_init(sharesPoolAddress);
+        __Ownable_init(pool);
     }
 
     event Mint(

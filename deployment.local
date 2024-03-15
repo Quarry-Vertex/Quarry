@@ -1,0 +1,11 @@
+{
+  "deployer_pkey": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  "oracle_pkey": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+  "qbtc": "0x7a2088a1bfc9d81c55368ae168c2c02570cb814f",
+  "pool": "0x09635f643e140090a9a8dcd712ed6285858cebef",
+  "share": "0xc5a5c42992decbae36851359345fe25997f5c42d",
+  "peg_in_address": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "ring_buffer_size": 10000,
+  "eth_rpc_url": "http://localhost:8545",
+  "btc_rpc_url": "https://yolo-holy-sheet.btc-testnet.quiknode.pro/920ff3a045338aaeebaec4a4ea5ee278ee4e737e/"
+}
