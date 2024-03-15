@@ -7,5 +7,5 @@
   "peg_in_address": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "ring_buffer_size": 10000,
   "eth_rpc_url": "http://localhost:8545",
-  "btc_rpc_url": "https://yolo-holy-sheet.btc-testnet.quiknode.pro/920ff3a045338aaeebaec4a4ea5ee278ee4e737e/"
+  "btc_rpc_url": "https://dark-icy-putty.btc.quiknode.pro/c312ce60f2c274142fe6c7c08cb3999c3ae354eb/"
 }

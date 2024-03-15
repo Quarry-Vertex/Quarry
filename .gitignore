@@ -2,5 +2,8 @@ node_modules
 node_modules/
 env
 oracle/target/
+quarry-sdk/target/
+target/
+Cargo.lock
 contracts/lib/
 deployment.local

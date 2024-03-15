@@ -125,15 +125,16 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         quarryPegInAddress = _pegInAddress;
 
         chainTip = ChainTip("", "");
+        // prv 12323
+        // mrkl 2534534
         sharesId = 0;
 
     }
 
     function setChainTip(ChainTip memory _chainTip) public onlyOracle {
-        // check if the merkleRoot hasn't been populated the chain tip hasn't been set
-        if (_chainTip.merkleRootHash != "") {
-            require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
-                "New chain tip prev block hash does not match current chain tip block hash");
+        if (chainTip.merkleRootHash != "") {
+          require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
+                  "New chain tip prev block hash does not match current chain tip block hash");
         }
 
         chainTip = _chainTip;
@@ -233,6 +234,13 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
     // Clears out all shares and distributes rewards prorata to addresses
     // This function should be called by the Stratum mining pool when blocks are won
+    // need to make sure 
+    // - is part of the block chain (keep a map of blocks received)
+    // - make sure it points to peg in addy (coinbase address)
+    // make dr take just a block hash, this would mean set chain tip needs full
+    // block. instead of just storing the chain tip we store a mapping of all 
+    // blocks recieved (hash -> block). so when someone calls dr we know the 
+    // oracle submitted the right information
     function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
         require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
 
