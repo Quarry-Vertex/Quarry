@@ -5,7 +5,7 @@ import json
 w3 = Web3(Web3.HTTPProvider("http://localhost:8545"))
 
 # Load the contract ABI
-contract_abi_path = "../contracts/rewardContracts/out/SharesPool.sol/SharesPoolAbi.json"
+contract_abi_path = "../contracts/out/SharesPool.sol/SharesPoolAbi.json"
 with open(contract_abi_path) as f:
     contract_abi = json.load(f)
 

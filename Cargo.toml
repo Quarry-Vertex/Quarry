@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "quarry-sdk",
+    "oracle",
+]
+
+resolver = "2"
+
+[profile.integration]
+inherits = "dev"
+
+[profile.dev]
+panic = 'abort'
+
+[profile.release]
+panic = 'abort'
