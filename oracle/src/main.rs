@@ -10,21 +10,21 @@ use std::time::Duration;
 #[tokio::main]
 async fn main() {
     let deployment = Deployment::get(Env::Local);
-    let provider = Provider::new_client(&deployment.eth_rpc_url.clone(), 15, 500).unwrap();
-    let chain_id = provider.get_chainid().await.unwrap();
-    let wallet = deployment
-        .oracle_pkey
-        .clone()
-        .parse::<LocalWallet>()
-        .unwrap()
-        .with_chain_id(chain_id.as_u64());
+    //let provider = Provider::new_client(&deployment.eth_rpc_url.clone(), 15, 500).unwrap();
+    //let chain_id = provider.get_chainid().await.unwrap();
+    // let wallet = deployment
+        // .oracle_pkey
+        // .clone()
+        // .parse::<LocalWallet>()
+        // .unwrap()
+        // .with_chain_id(chain_id.as_u64());
 
-    let provider = Arc::new(SignerMiddleware::new(
-        provider.interval(Duration::from_millis(500)),
-        wallet,
-    ));
+    // let provider = Arc::new(SignerMiddleware::new(
+        // provider.interval(Duration::from_millis(500)),
+        // wallet,
+    // ));
 
-    let pool = Pool::new(deployment.pool, provider.clone());
+    // let pool = Pool::new(deployment.pool, provider.clone());
 
     loop {
         let client = reqwest::Client::new();
@@ -37,6 +37,7 @@ async fn main() {
         println!("Best Hash: {:?}", best_hash);
         println!("Best Block: {:?}", best_block);
 
+        /*
         let previous_block_hash: [u8; 32] = H256::from_slice(
             &hex::decode(
                 best_block["previousBlockHash"]
@@ -68,6 +69,7 @@ async fn main() {
         println!("Set chain tip: {:?}", receipt);
 
         tokio::time::sleep(Duration::from_secs(60)).await;
+        */
     }
 }
 
@@ -88,7 +90,8 @@ async fn get_best_block(
     endpoint: &str,
     hash: &str,
 ) -> Result<Value, reqwest::Error> {
-    let res: Value = client
+    // get block data
+    let block_res: Value = client
         .post(endpoint)
         .json(&json!({
             "method": "getblock",
@@ -99,8 +102,35 @@ async fn get_best_block(
         .json()
         .await?;
 
+    let prev_hash = format!("0x{}", block_res["result"]["previousblockhash"].as_str().unwrap());
+    let merkle_root = format!("0x{}", block_res["result"]["merkleroot"].as_str().unwrap());
+    let bits = format!("0x{}", block_res["result"]["bits"].as_str().unwrap());
+    // the coinbase transaction is the first listed transaction
+    let coin_base_tx = format!("{}", block_res["result"]["tx"][0].as_str().unwrap());
+
+    // find transaction information for coinbase transaction
+    let tx_res: Value = client
+        .post(endpoint)
+        .json(&json!({
+            "method": "getrawtransaction",
+            "params": [coin_base_tx, 1]     // pass '1' for verbosity
+        }))
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let address = format!("0x{}", tx_res["result"]["vout"][0]["scriptPubKey"]["address"].as_str().unwrap());
+    let btc_value = tx_res["result"]["vout"][0]["value"].as_f64().unwrap();
+    // convert BTC -> SAT
+    let value = format!("{}", btc_value * 100_000_000.0);
+
+    // return serialized data for SC
     Ok(json!({
-        "previousBlockHash": format!("0x{}", res["result"]["previousblockhash"].as_str().unwrap()),
-        "merkleRootHash": format!("0x{}", res["result"]["merkleroot"].as_str().unwrap()),
+        "previousBlockHash": prev_hash,
+        "merkleRootHash": merkle_root,
+        "address": address,
+        "value": value,
+        "bits": bits,
     }))
 }
