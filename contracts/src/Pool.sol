@@ -54,14 +54,15 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
     QBTC qbtc; // synthetic BTC
 
-    mapping(bytes32 => uint8) public confirmations; // tracks number of confirmations for each block hash
-    bytes32[] blocks; // list of block hashes from setChainTip
+    mapping(bytes32 => uint256) public confirmations; // tracks number of confirmations for each block hash
+    mapping(bytes32 => BitcoinBlock) blocks; // tracks blocks, needed to validate blocks when distributing rewards
+    bytes32[] blockHashes; // list of block hashes from setChainTip
 
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
 
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
 
-    ChainTip public chainTip;
+    BitcoinBlock public chainTip;
 
     event ChainTipSet(
         bytes32 merkleRootHash
@@ -81,18 +82,10 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         bytes32 blockHash
     );
 
-    struct ChainTip {
-        bytes32 previousBlockHash;
-        bytes32 merkleRootHash;
-    }
-
     struct BlockHeader {
-        uint32 version;
         bytes32 previousBlockHash;
         bytes32 merkleRootHash;
-        uint32 timestamp;
         uint32 bits;
-        uint32 nonce;
     }
 
     // From https://en.bitcoin.it/wiki/Block + https://en.bitcoin.it/wiki/Transaction
@@ -124,32 +117,35 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         chainTipOracle = _oracleAddress;
         quarryPegInAddress = _pegInAddress;
 
-        chainTip = ChainTip("", "");
-        // prv 12323
-        // mrkl 2534534
-        sharesId = 0;
+        BitcoinBlock memory firstChainTip;
+        BlockHeader memory firstHeader;
+        firstHeader.merkleRootHash = "";
+        firstChainTip.header = firstHeader;
+        chainTip = firstChainTip;
 
+        sharesId = 0;
     }
 
-    function setChainTip(ChainTip memory _chainTip) public onlyOracle {
-        if (chainTip.merkleRootHash != "") {
-          require(_chainTip.previousBlockHash == chainTip.merkleRootHash,
+    function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
+        if (chainTip.header.merkleRootHash != "") {
+          require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
                   "New chain tip prev block hash does not match current chain tip block hash");
         }
 
         chainTip = _chainTip;
 
-        emit ChainTipSet(_chainTip.merkleRootHash);
+        emit ChainTipSet(_chainTip.header.merkleRootHash);
 
         // increment number of confirmations for each block
-        for (uint256 i = 0; i < blocks.length; i++) {
-            confirmations[blocks[i]]++;
+        for (uint256 i = 0; i < blockHashes.length; i++) {
+            confirmations[blockHashes[i]]++;
         }
 
-        blocks.push(_chainTip.merkleRootHash);
+        blocks[_chainTip.header.merkleRootHash] = _chainTip;
+        blockHashes.push(_chainTip.header.merkleRootHash);
     }
 
-    function getChainTip() public onlyOracle view returns (ChainTip memory tip) {
+    function getChainTip() public onlyOracle view returns (BitcoinBlock memory tip) {
         return chainTip;
     }
 
@@ -206,7 +202,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _block.header.previousBlockHash;
-        require(prevHash == chainTip.merkleRootHash, "Submitted block is stale");
+        require(prevHash == chainTip.header.merkleRootHash, "Submitted block is stale");
 
         // Check that the Coinbase tx is pointed to current peg in address of the mining pool
         require(_block.outputAddress == quarryPegInAddress,
@@ -233,19 +229,12 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     }
 
     // Clears out all shares and distributes rewards prorata to addresses
-    // This function should be called by the Stratum mining pool when blocks are won
-    // need to make sure 
-    // - is part of the block chain (keep a map of blocks received)
-    // - make sure it points to peg in addy (coinbase address)
-    // make dr take just a block hash, this would mean set chain tip needs full
-    // block. instead of just storing the chain tip we store a mapping of all 
-    // blocks recieved (hash -> block). so when someone calls dr we know the 
-    // oracle submitted the right information
-    function distributeRewards(BitcoinBlock memory _block) public returns (bool success) {
-        require(confirmations[_block.header.merkleRootHash] < 6, "Do not have 6+ confirmations");
+    function distributeRewards(bytes32 _blockHash) public returns (bool success) {
+        require(blocks[_blockHash].outputAddress == quarryPegInAddress, "Block's output address does not match quarry peg in address");
+        require(confirmations[_blockHash] >= 6, "Block does not have 6+ confirmations");
 
         uint256 numShares = numSharesInRingBuffer();
-        bytes8 blockReward = _block.blockReward;
+        bytes8 blockReward = blocks[_blockHash].blockReward;
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
         while (!ringBufferIsEmpty()) {
             uint256 burnTokenId = popFromRingBuffer();
@@ -254,7 +243,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
             shares.burn(burnTokenId);
         }
 
-        emit RewardsDistributed(_block.header.merkleRootHash);
+        emit RewardsDistributed(_blockHash);
 
         return true;
     }
