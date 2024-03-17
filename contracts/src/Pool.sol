@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./Share.sol";
-import "./QBTC.sol";
+import "./QSAT.sol";
 import "./lib/RingBuffer.sol";
 import "./lib/SPVProof.sol";
 
@@ -52,7 +52,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     Share shares; // Shares NFT instance
     uint256 sharesId;
 
-    QBTC qbtc; // synthetic BTC
+    QSAT qsat; // synthetic BTC
 
     mapping(bytes32 => uint256) public confirmations; // tracks number of confirmations for each block hash
     mapping(bytes32 => BitcoinBlock) blocks; // tracks blocks, needed to validate blocks when distributing rewards
@@ -101,8 +101,8 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         shares = Share(_shares);
     }
 
-    function setQBTCContract(address _qbtcAddress) public onlyOwner {
-        qbtc = QBTC(_qbtcAddress);
+    function setQSATContract(address _qsatAddress) public onlyOwner {
+        qsat = QSAT(_qsatAddress);
     }
 
     function initialize(address _oracleAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
@@ -239,7 +239,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         while (!ringBufferIsEmpty()) {
             uint256 burnTokenId = popFromRingBuffer();
             address shareOwner = shares.ownerOf(burnTokenId);
-            qbtc.mint(shareOwner, blockRewardPerShare);
+            qsat.mint(shareOwner, blockRewardPerShare);
             shares.burn(burnTokenId);
         }
 

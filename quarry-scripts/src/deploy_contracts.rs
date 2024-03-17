@@ -33,7 +33,7 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
     ));
 
     // TODO: these contracts are not behind a proxy
-    let qbtc = bindings::qbtc::QBTC::deploy(Arc::clone(&provider), ())
+    let qsat = bindings::qsat::QSAT::deploy(Arc::clone(&provider), ())
         .unwrap()
         .send()
         .await?;
@@ -46,7 +46,7 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
         .send()
         .await?;
 
-    qbtc.initialize("QuarryBTC".to_string(), "QBTC".to_string(), pool.address())
+    qsat.initialize("QuarrySAT".to_string(), "QSAT".to_string(), pool.address())
         .send()
         .await?
         .await
@@ -76,11 +76,11 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
         .unwrap()
         .unwrap();
 
-    println!("QBTC: {:?}", qbtc.address());
+    println!("QSAT: {:?}", qsat.address());
     println!("Pool: {:?}", pool.address());
     println!("Share: {:?}", share.address());
 
-    deployment.qbtc = qbtc.address();
+    deployment.qsat = qsat.address();
     deployment.pool = pool.address();
     deployment.share = share.address();
 
