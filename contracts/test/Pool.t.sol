@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Share} from"../src/Share.sol";
-import {QBTC} from"../src/QBTC.sol";
+import {QSAT} from"../src/QSAT.sol";
 import {Pool} from"../src/Pool.sol";
 
 import "forge-std/console.sol";
@@ -15,11 +15,11 @@ contract PoolTest is Test {
 
     Pool public pool;
     Share public share;
-    QBTC public qbtc;
+    QSAT public qsat;
 
     address public proxy;
     address public proxyShare;
-    address public proxyQBTC;
+    address public proxyQSAT;
 
     // Helper methods
     function createTestBlock(
@@ -65,16 +65,16 @@ contract PoolTest is Test {
           abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
-        proxyQBTC = Upgrades.deployUUPSProxy(
-          "QBTC.sol",
-          abi.encodeCall(share.initialize, ("QBTC", "QBTC", proxy))
+        proxyQSAT = Upgrades.deployUUPSProxy(
+          "QSAT.sol",
+          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxy))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
-        qbtc = QBTC(proxyQBTC);
+        qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQBTCContract(proxyQBTC);
+        pool.setQSATContract(proxyQSAT);
     }
 
     function test_initialChainTip() public {
@@ -342,16 +342,16 @@ contract PoolTest is Test {
           abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
-        proxyQBTC = Upgrades.deployUUPSProxy(
-          "QBTC.sol",
-          abi.encodeCall(Share.initialize, ("QBTC", "QBTC", proxy))
+        proxyQSAT = Upgrades.deployUUPSProxy(
+          "QSAT.sol",
+          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
-        qbtc = QBTC(proxyQBTC);
+        qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQBTCContract(proxyQBTC);
+        pool.setQSATContract(proxyQSAT);
         vm.startPrank(oracleAddress);
 
         // create addresses
@@ -443,16 +443,16 @@ contract PoolTest is Test {
           abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
-        proxyQBTC = Upgrades.deployUUPSProxy(
-          "QBTC.sol",
-          abi.encodeCall(Share.initialize, ("QBTC", "QBTC", proxy))
+        proxyQSAT = Upgrades.deployUUPSProxy(
+          "QSAT.sol",
+          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
-        qbtc = QBTC(proxyQBTC);
+        qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQBTCContract(proxyQBTC);
+        pool.setQSATContract(proxyQSAT);
         vm.startPrank(oracleAddress);
 
         // create addresses
@@ -604,14 +604,14 @@ contract PoolTest is Test {
         // because 1 and 2 got evicted from the ring buffer
         pool.distributeRewards(block1.header.merkleRootHash);
 
-        assertEq(qbtc.balanceOf(account1), 0, "address1 should not have been rewarded any QBTC");
-        assertEq(qbtc.balanceOf(account2), 0, "address2 should not have been rewarded any QBTC");
+        assertEq(qsat.balanceOf(account1), 0, "address1 should not have been rewarded any QSAT");
+        assertEq(qsat.balanceOf(account2), 0, "address2 should not have been rewarded any QSAT");
 
-        assertEq(qbtc.balanceOf(account3), 10000, "address3 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account4), 10000, "address4 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account5), 10000, "address5 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account6), 10000, "address6 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account7), 10000, "address7 should have been rewarded 10000 QBTC");
+        assertEq(qsat.balanceOf(account3), 10000, "address3 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account4), 10000, "address4 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account5), 10000, "address5 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account6), 10000, "address6 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account7), 10000, "address7 should have been rewarded 10000 QSAT");
 
         assertFalse(share.tokenExists(0), "Token id 0 should have been burned");
         assertFalse(share.tokenExists(1), "Token id 1 should have been burned");
@@ -632,16 +632,16 @@ contract PoolTest is Test {
           abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
-        proxyQBTC = Upgrades.deployUUPSProxy(
-          "QBTC.sol",
-          abi.encodeCall(Share.initialize, ("QBTC", "QBTC", proxy))
+        proxyQSAT = Upgrades.deployUUPSProxy(
+          "QSAT.sol",
+          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
-        qbtc = QBTC(proxyQBTC);
+        qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQBTCContract(proxyQBTC);
+        pool.setQSATContract(proxyQSAT);
         vm.startPrank(oracleAddress);
 
         // create address
@@ -791,13 +791,13 @@ contract PoolTest is Test {
         // because 1 and 2 got evicted from the ring buffer
         pool.distributeRewards(block1.header.merkleRootHash);
 
-        assertEq(qbtc.balanceOf(account1), 0, "address1 should not have been rewarded any QBTC");
-        assertEq(qbtc.balanceOf(account2), 0, "address2 should not have been rewarded any QBTC");
+        assertEq(qsat.balanceOf(account1), 0, "address1 should not have been rewarded any QSAT");
+        assertEq(qsat.balanceOf(account2), 0, "address2 should not have been rewarded any QSAT");
 
-        assertEq(qbtc.balanceOf(account3), 20000, "address3 should have been rewarded 20000 QBTC");
-        assertEq(qbtc.balanceOf(account4), 10000, "address4 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account5), 10000, "address5 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account6), 10000, "address6 should have been rewarded 10000 QBTC");
+        assertEq(qsat.balanceOf(account3), 20000, "address3 should have been rewarded 20000 QSAT");
+        assertEq(qsat.balanceOf(account4), 10000, "address4 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account5), 10000, "address5 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account6), 10000, "address6 should have been rewarded 10000 QSAT");
 
         assertFalse(share.tokenExists(0), "Token id 0 should have been burned");
         assertFalse(share.tokenExists(1), "Token id 1 should have been burned");
@@ -818,16 +818,16 @@ contract PoolTest is Test {
           abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
-        proxyQBTC = Upgrades.deployUUPSProxy(
-          "QBTC.sol",
-          abi.encodeCall(Share.initialize, ("QBTC", "QBTC", proxy))
+        proxyQSAT = Upgrades.deployUUPSProxy(
+          "QSAT.sol",
+          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
-        qbtc = QBTC(proxyQBTC);
+        qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQBTCContract(proxyQBTC);
+        pool.setQSATContract(proxyQSAT);
         vm.startPrank(oracleAddress);
 
         // create address
@@ -977,13 +977,13 @@ contract PoolTest is Test {
         // Expect 1000 to be distributed to all addresses
         pool.distributeRewards(block1.header.merkleRootHash);
 
-        assertEq(qbtc.balanceOf(account1), 10000, "address1 should have been rewarded 20000 QBTC");
-        assertEq(qbtc.balanceOf(account2), 10000, "address2 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account3), 10000, "address3 should have been rewarded 20000 QBTC");
-        assertEq(qbtc.balanceOf(account4), 10000, "address4 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account5), 10000, "address5 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account6), 10000, "address6 should have been rewarded 10000 QBTC");
-        assertEq(qbtc.balanceOf(account6), 10000, "address7 should have been rewarded 10000 QBTC");
+        assertEq(qsat.balanceOf(account1), 10000, "address1 should have been rewarded 20000 QSAT");
+        assertEq(qsat.balanceOf(account2), 10000, "address2 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account3), 10000, "address3 should have been rewarded 20000 QSAT");
+        assertEq(qsat.balanceOf(account4), 10000, "address4 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account5), 10000, "address5 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account6), 10000, "address6 should have been rewarded 10000 QSAT");
+        assertEq(qsat.balanceOf(account6), 10000, "address7 should have been rewarded 10000 QSAT");
 
         assertFalse(share.tokenExists(0), "Token id 0 should have been burned");
         assertFalse(share.tokenExists(1), "Token id 1 should have been burned");
@@ -1004,16 +1004,16 @@ contract PoolTest is Test {
     //       abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
     //     );
 
-    //     proxyQBTC = Upgrades.deployUUPSProxy(
-    //       "QBTC.sol",
-    //       abi.encodeCall(Share.initialize, ("QBTC", "QBTC", proxy))
+    //     proxyQSAT = Upgrades.deployUUPSProxy(
+    //       "QSAT.sol",
+    //       abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
     //     );
 
     //     pool = Pool(proxy);
     //     share = Share(proxyShare);
-    //     qbtc = QBTC(proxyQBTC);
+    //     qsat = QSAT(proxyQSAT);
     //     pool.setShareContract(proxyShare);
-    //     pool.setQBTCContract(proxyQBTC);
+    //     pool.setQSATContract(proxyQSAT);
     //     vm.startPrank(oracleAddress);
 
     //     // Example of a valid Merkle path for transaction A in the Merkle tree
@@ -1091,8 +1091,8 @@ contract PoolTest is Test {
     //     // because 1 and 2 got evicted from the ring buffer
     //     pool.distributeRewards(block1);
 
-    //     assertEq(qbtc.balanceOf(account1), 25000, "address1 should have been rewarded 25000 QBTC");
-    //     assertEq(qbtc.balanceOf(account2), 25000, "address2 should have been rewarded 25000 QBTC");
+    //     assertEq(qsat.balanceOf(account1), 25000, "address1 should have been rewarded 25000 QSAT");
+    //     assertEq(qsat.balanceOf(account2), 25000, "address2 should have been rewarded 25000 QSAT");
 
     //     assertFalse(share.tokenExists(0), "Token id 0 should have been burned");
     //     assertFalse(share.tokenExists(1), "Token id 1 should have been burned");

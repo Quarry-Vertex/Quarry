@@ -13,7 +13,7 @@ pub struct Deployment {
     pub oracle_pkey: String,
     // contract addresses
     #[serde(default)]
-    pub qbtc: H160,
+    pub qsat: H160,
     #[serde(default)]
     pub pool: H160,
     #[serde(default)]
@@ -76,7 +76,7 @@ pub fn regenerate_bindings() {
         MultiAbigen::from_json_files(format!("{}/contracts", root.to_string_lossy())).unwrap();
 
     let contracts = SelectContracts::default()
-        .add_name("QBTC")
+        .add_name("QSAT")
         .add_name("Share")
         .add_name("Pool");
 
