@@ -1,7 +1,8 @@
 // Oracle service for interfacing with the SharesPool smart contract
 
+use base58::FromBase58;
 use ethers::prelude::*;
-use quarry_sdk::bindings::pool::{ChainTip, Pool};
+use quarry_sdk::bindings::pool::{BlockHeader, BitcoinBlock, Pool};
 use quarry_sdk::{Deployment, Env};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -10,21 +11,23 @@ use std::time::Duration;
 #[tokio::main]
 async fn main() {
     let deployment = Deployment::get(Env::Local);
-    //let provider = Provider::new_client(&deployment.eth_rpc_url.clone(), 15, 500).unwrap();
-    //let chain_id = provider.get_chainid().await.unwrap();
-    // let wallet = deployment
-        // .oracle_pkey
-        // .clone()
-        // .parse::<LocalWallet>()
-        // .unwrap()
-        // .with_chain_id(chain_id.as_u64());
+    let provider = Provider::new_client(&deployment.eth_rpc_url.clone(), 15, 500).unwrap();
+    let chain_id = provider.get_chainid().await.unwrap();
+    let wallet = deployment
+        .oracle_pkey
+        .clone()
+        .parse::<LocalWallet>()
+        .unwrap()
+        .with_chain_id(chain_id.as_u64());
 
-    // let provider = Arc::new(SignerMiddleware::new(
-        // provider.interval(Duration::from_millis(500)),
-        // wallet,
-    // ));
+    let provider = Arc::new(SignerMiddleware::new(
+        provider.interval(Duration::from_millis(500)),
+        wallet,
+    ));
 
-    // let pool = Pool::new(deployment.pool, provider.clone());
+    let pool = Pool::new(deployment.pool, provider.clone());
+
+    let mut previous_merkle: [u8; 32] = [0; 32];
 
     loop {
         let client = reqwest::Client::new();
@@ -34,13 +37,12 @@ async fn main() {
         let best_block = get_best_block(&client, &deployment.btc_rpc_url, &best_hash)
             .await
             .unwrap();
-        println!("Best Hash: {:?}", best_hash);
-        println!("Best Block: {:?}", best_block);
+        // println!("Best Hash: {:?}", best_hash);
+        // println!("Best Block: {:?}", best_block);
 
-        /*
         let previous_block_hash: [u8; 32] = H256::from_slice(
             &hex::decode(
-                best_block["previousBlockHash"]
+                best_block["header"]["previousBlockHash"]
                     .as_str()
                     .unwrap()
                     .trim_start_matches("0x"),
@@ -50,7 +52,7 @@ async fn main() {
         .into();
         let merkle_root_hash: [u8; 32] = H256::from_slice(
             &hex::decode(
-                best_block["merkleRootHash"]
+                best_block["header"]["merkleRootHash"]
                     .as_str()
                     .unwrap()
                     .trim_start_matches("0x"),
@@ -58,18 +60,99 @@ async fn main() {
             .unwrap(),
         )
         .into();
-        let chain_tip = ChainTip {
-            previous_block_hash,
-            merkle_root_hash,
+        let bits_hex_str = best_block["header"]["bits"]
+            .as_str()
+            .unwrap()
+            .trim_start_matches("0x");
+        let bits_bytes = hex::decode(bits_hex_str).unwrap();
+        let bits = u32::from_be_bytes(bits_bytes.try_into().unwrap());
+
+        /*
+         * let bits: [u8; 32] = H256::from_slice(
+         *     &hex::decode(
+         *         best_block["header"]["bits"]
+         *             .as_str()
+         *             .unwrap()
+         *             .trim_start_matches("0x"),
+         *     )
+         *     .unwrap(),
+         * )
+         * .into();
+         */
+
+        /*
+         * let output_address: [u8; 32] = H256::from_slice(
+         *     &hex::decode(
+         *         best_block["address"]
+         *             .as_str()
+         *             .unwrap()
+         *             .trim_start_matches("0x"),
+         *     )
+         *     .unwrap(),
+         * )
+         * .into();
+         */
+        // Assuming best_block["address"] is a String containing the Bitcoin address
+        let address_str = best_block["address"].as_str().unwrap().trim_start_matches("0x");
+
+        // Decode the address from Base58Check format
+        let mut address_bytes = address_str.from_base58().unwrap();
+
+        // Pad or truncate the byte array to fit into 32 bytes
+        address_bytes.resize(32, 0);
+
+        // Convert to a fixed-size array
+        let output_address: [u8; 32] = address_bytes.try_into().unwrap();
+
+
+        /*
+         * let block_reward: [u8; 8] = H256::from_slice(
+         *     &hex::decode(
+         *         best_block["value"]
+         *             .as_str()
+         *             .unwrap(),
+         *     )
+         *     .unwrap(),
+         * )
+         * .into();
+         */
+        let hex_str = best_block["value"].as_str().unwrap();
+        // does this work with other lenghts (works with len == 3)
+        let padded_hex_str = if hex_str.len() % 2 == 1 {
+            format!("0{}", hex_str)
+        } else {
+            hex_str.to_string()
         };
 
-        let tx = pool.set_chain_tip(chain_tip);
-        let tx = tx.send().await.unwrap();
-        let receipt = tx.await.unwrap();
-        println!("Set chain tip: {:?}", receipt);
+        let mut bytes = hex::decode(&padded_hex_str).unwrap();
+        bytes.resize(8, 0);
+        let block_reward: [u8; 8] = bytes.try_into().unwrap();
 
-        tokio::time::sleep(Duration::from_secs(60)).await;
-        */
+        let header = BlockHeader {
+            previous_block_hash,
+            merkle_root_hash,
+            bits,
+        };
+        let chain_tip = BitcoinBlock {
+            header,
+            output_address,
+            block_reward,
+        };
+
+        println!("Best Hash: {:?}", best_hash);
+        println!("----");
+        if previous_merkle != merkle_root_hash {
+            println!("Best Block: {:?}", best_block);
+            let tx = pool.set_chain_tip(chain_tip);
+            let tx = tx.send().await.unwrap();
+            let receipt = tx.await.unwrap();
+            println!("Set chain tip: {:?}", receipt);
+            previous_merkle = merkle_root_hash;
+        } else {
+            println!("No new block");
+        }
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }
 
@@ -127,10 +210,12 @@ async fn get_best_block(
 
     // return serialized data for SC
     Ok(json!({
-        "previousBlockHash": prev_hash,
-        "merkleRootHash": merkle_root,
+        "header": {
+            "previousBlockHash": prev_hash,
+            "merkleRootHash": merkle_root,
+            "bits": bits,
+        },
         "address": address,
         "value": value,
-        "bits": bits,
     }))
 }

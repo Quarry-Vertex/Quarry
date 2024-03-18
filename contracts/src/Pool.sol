@@ -94,7 +94,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
         // Transactions
         bytes32 outputAddress;
-        bytes8 blockReward;
+        uint256 blockReward;
     }
 
     function setShareContract(address _shares) public onlyOwner {
@@ -234,7 +234,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         require(confirmations[_blockHash] >= 6, "Block does not have 6+ confirmations");
 
         uint256 numShares = numSharesInRingBuffer();
-        bytes8 blockReward = blocks[_blockHash].blockReward;
+        uint256 blockReward = blocks[_blockHash].blockReward;
         uint256 blockRewardPerShare = uint64(blockReward) / numShares;
         while (!ringBufferIsEmpty()) {
             uint256 burnTokenId = popFromRingBuffer();
