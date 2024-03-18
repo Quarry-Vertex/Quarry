@@ -18,8 +18,8 @@ contract QSATBridgeTest is Test {
     QSATBridge public qsatBridge;
 
     address proxy;
-    address proxyqsatBridge;
-    address proxyqsat;
+    address proxyQSATBridge;
+    address proxyQSAT;
 
     function setUp() public {
         proxy = Upgrades.deployUUPSProxy(
@@ -27,24 +27,24 @@ contract QSATBridgeTest is Test {
             abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
         );
 
-        proxyqsatBridge = Upgrades.deployUUPSProxy(
+        proxyQSATBridge = Upgrades.deployUUPSProxy(
             "QSATBridge.sol",
             abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
         );
 
-        proxyqsat = Upgrades.deployUUPSProxy(
+        proxyQSAT = Upgrades.deployUUPSProxy(
             "QSAT.sol",
-            abi.encodeCall(QSAT.initialize, ("Quarry", "QSAT", proxyqsatBridge))
+            abi.encodeCall(QSAT.initialize, ("Quarry", "QSAT", proxyQSATBridge))
         );
 
-        qsat = QSAT(proxyqsat);
-        qsatBridge = QSATBridge(proxyqsatBridge);
+        qsat = QSAT(proxyQSAT);
+        qsatBridge = QSATBridge(proxyQSATBridge);
 
-        qsatBridge.setQSATContract(proxyqsat);
+        qsatBridge.setQSATContract(proxyQSAT);
     }
 
     function test_bridgeInitialSupply() public {
-        assertEq(qsat.balanceOf(proxyqsatBridge), 21000000 * 100000000, "Expected 21000000 * 100000000 qsat to be initial supply");
+        assertEq(qsat.balanceOf(proxyQSATBridge), 21000000 * 100000000, "Expected 21000000 * 100000000 qsat to be initial supply");
     }
 
     function test_pegInQSAT() public {
@@ -55,7 +55,7 @@ contract QSATBridgeTest is Test {
         qsatBridge.pegInQSAT(testAddress, 10000);
 
         assertEq(qsat.balanceOf(testAddress), 10000, "Expected 10000 qsat to be pegged in");
-        assertEq(qsat.balanceOf(proxyqsatBridge), (qsat.TOTAL_SUPPLY() - 10000), "Expected 10000 to be deducted from bridge contract");
+        assertEq(qsat.balanceOf(proxyQSATBridge), (qsat.TOTAL_SUPPLY() - 10000), "Expected 10000 to be deducted from bridge contract");
     }
 
     function test_pegOutQSAT() public {
@@ -63,7 +63,7 @@ contract QSATBridgeTest is Test {
         qsatBridge.pegInQSAT(testAddress, 10000);
 
         vm.prank(testAddress);
-        qsat.approve(proxyqsatBridge, 5000);
+        qsat.approve(proxyQSATBridge, 5000);
 
         vm.expectEmit();
         emit QSATBridge.PegOutQSAT(testBTCAddress, 5000);

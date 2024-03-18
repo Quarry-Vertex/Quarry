@@ -5,4 +5,5 @@
 //! These files may be overwritten by the codegen system at any time.
 pub mod pool;
 pub mod qsat;
+pub mod qsat_bridge;
 pub mod share;

@@ -15,6 +15,8 @@ pub struct Deployment {
     #[serde(default)]
     pub qsat: H160,
     #[serde(default)]
+    pub qsat_bridge: H160,
+    #[serde(default)]
     pub pool: H160,
     #[serde(default)]
     pub share: H160,
@@ -77,6 +79,7 @@ pub fn regenerate_bindings() {
 
     let contracts = SelectContracts::default()
         .add_name("QSAT")
+        .add_name("QSATBridge")
         .add_name("Share")
         .add_name("Pool");
 

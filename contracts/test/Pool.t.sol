@@ -4,6 +4,7 @@ import {Test} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Share} from"../src/Share.sol";
 import {QSAT} from"../src/QSAT.sol";
+import {QSATBridge} from"../src/QSATBridge.sol";
 import {Pool} from"../src/Pool.sol";
 
 import "forge-std/console.sol";
@@ -16,9 +17,11 @@ contract PoolTest is Test {
     Pool public pool;
     Share public share;
     QSAT public qsat;
+    QSATBridge public qsatBridge;
 
     address public proxy;
     address public proxyShare;
+    address public proxyQSATBridge;
     address public proxyQSAT;
 
     // Helper methods
@@ -60,6 +63,11 @@ contract PoolTest is Test {
             abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
         );
 
+        proxyQSATBridge = Upgrades.deployUUPSProxy(
+            "QSATBridge.sol",
+            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
+        );
+
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
           abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
@@ -67,14 +75,16 @@ contract PoolTest is Test {
 
         proxyQSAT = Upgrades.deployUUPSProxy(
           "QSAT.sol",
-          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxy))
+          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
+        qsatBridge = QSATBridge(proxyQSATBridge);
+        qsatBridge.setQSATContract(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSATBridge);
     }
 
     function test_initialChainTip() public {
@@ -136,7 +146,7 @@ contract PoolTest is Test {
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
         uint256 blockReward = (50000);
-        uint32 bits = 0x1b0404cb; 
+        uint32 bits = 0x1b0404cb;
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
@@ -174,7 +184,7 @@ contract PoolTest is Test {
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
         uint256 blockReward = (50000);
-        uint32 bits = 0x1b0404cb; 
+        uint32 bits = 0x1b0404cb;
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
@@ -213,7 +223,7 @@ contract PoolTest is Test {
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
         uint256 blockReward = (50000);
-        uint32 bits = 0x1b0404cb; 
+        uint32 bits = 0x1b0404cb;
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
@@ -253,7 +263,7 @@ contract PoolTest is Test {
         // wrong, different from peg in
         bytes32 outputAddress = bytes32(0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
         uint256 blockReward = (50000);
-        uint32 bits = 0x1b0404cb; 
+        uint32 bits = 0x1b0404cb;
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
@@ -295,7 +305,7 @@ contract PoolTest is Test {
         // create addresses
         address account1 = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
         address account2 = (0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC);
-        uint32 bits = 0x1b0404cb; 
+        uint32 bits = 0x1b0404cb;
 
         /* Block 1 */
 
@@ -337,21 +347,29 @@ contract PoolTest is Test {
             abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 2))
         );
 
+        proxyQSATBridge = Upgrades.deployUUPSProxy(
+            "QSATBridge.sol",
+            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
+        );
+
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
+          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
         proxyQSAT = Upgrades.deployUUPSProxy(
           "QSAT.sol",
-          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
+          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
+        qsatBridge = QSATBridge(proxyQSATBridge);
+        qsatBridge.setQSATContract(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSATBridge);
+
         vm.startPrank(oracleAddress);
 
         // create addresses
@@ -379,7 +397,7 @@ contract PoolTest is Test {
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
         uint256 blockReward = (50000);
-        uint32 bits = 0x1b0404cb; 
+        uint32 bits = 0x1b0404cb;
 
         Pool.BitcoinBlock memory block1 = createTestBlock(
             "D",            // previousBlockHash
@@ -438,21 +456,30 @@ contract PoolTest is Test {
             "Pool.sol",
             abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 5))
         );
+
+        proxyQSATBridge = Upgrades.deployUUPSProxy(
+            "QSATBridge.sol",
+            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
+        );
+
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
+          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
         proxyQSAT = Upgrades.deployUUPSProxy(
           "QSAT.sol",
-          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
+          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
+        qsatBridge = QSATBridge(proxyQSATBridge);
+        qsatBridge.setQSATContract(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSATBridge);
+
         vm.startPrank(oracleAddress);
 
         // create addresses
@@ -627,21 +654,30 @@ contract PoolTest is Test {
             "Pool.sol",
             abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 5))
         );
+
+        proxyQSATBridge = Upgrades.deployUUPSProxy(
+            "QSATBridge.sol",
+            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
+        );
+
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
+          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
         proxyQSAT = Upgrades.deployUUPSProxy(
           "QSAT.sol",
-          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
+          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
+        qsatBridge = QSATBridge(proxyQSATBridge);
+        qsatBridge.setQSATContract(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSATBridge);
+
         vm.startPrank(oracleAddress);
 
         // create address
@@ -813,21 +849,30 @@ contract PoolTest is Test {
             "Pool.sol",
             abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
         );
+
+        proxyQSATBridge = Upgrades.deployUUPSProxy(
+            "QSATBridge.sol",
+            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
+        );
+
         proxyShare = Upgrades.deployUUPSProxy(
           "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
+          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
         );
 
         proxyQSAT = Upgrades.deployUUPSProxy(
           "QSAT.sol",
-          abi.encodeCall(Share.initialize, ("QSAT", "QSAT", proxy))
+          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
         );
 
         pool = Pool(proxy);
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
+        qsatBridge = QSATBridge(proxyQSATBridge);
+        qsatBridge.setQSATContract(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSATBridge);
+
         vm.startPrank(oracleAddress);
 
         // create address
@@ -994,7 +1039,7 @@ contract PoolTest is Test {
         assertFalse(share.tokenExists(6), "Token id 6 should have been burned");
     }
 
-    function test_SubmitBlockWrongOutputAddress() public {
+    function test_distributeRewardWrongOutputAddress() public {
         vm.startPrank(oracleAddress);
 
         // Example of a valid Merkle path for transaction A in the Merkle tree
@@ -1018,7 +1063,7 @@ contract PoolTest is Test {
         uint256 blockReward = 50000;
         // create addresses
         address account1 = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
-        uint32 bits = 0x1b0404cb; 
+        uint32 bits = 0x1b0404cb;
 
         /* Block 1 */
 
