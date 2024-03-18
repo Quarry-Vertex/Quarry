@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./Share.sol";
-import "./QSAT.sol";
+import "./QSATBridge.sol";
 import "./lib/RingBuffer.sol";
 import "./lib/SPVProof.sol";
 
@@ -41,18 +41,18 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     uint256 DIFFICULTY_THRESHOLD;
     uint256 DIFFICULTY_SCALING;
 
-    address chainTipOracle;
+    address oracleAddress;
     bytes32 quarryPegInAddress;
 
     modifier onlyOracle() {
-        require(msg.sender == chainTipOracle, "Only the chainTipOracle can call this method");
+        require(msg.sender == oracleAddress, "Only the oracleAddress can call this method");
         _;
     }
 
     Share shares; // Shares NFT instance
     uint256 sharesId;
 
-    QSAT qsat; // synthetic BTC
+    QSATBridge qsatBridge; // synthetic BTC
 
     mapping(bytes32 => uint256) public confirmations; // tracks number of confirmations for each block hash
     mapping(bytes32 => BitcoinBlock) blocks; // tracks blocks, needed to validate blocks when distributing rewards
@@ -101,8 +101,8 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         shares = Share(_shares);
     }
 
-    function setQSATContract(address _qsatAddress) public onlyOwner {
-        qsat = QSAT(_qsatAddress);
+    function setQSATBridgeContract(address _qsatBridgeAddress) public onlyOwner {
+        qsatBridge = QSATBridge(_qsatBridgeAddress);
     }
 
     function initialize(address _oracleAddress, bytes32 _pegInAddress, uint256 _ringBufferSize) public initializer {
@@ -114,7 +114,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
         _initializeRingBuffer(_ringBufferSize);
 
-        chainTipOracle = _oracleAddress;
+        oracleAddress = _oracleAddress;
         quarryPegInAddress = _pegInAddress;
 
         BitcoinBlock memory firstChainTip;
@@ -239,7 +239,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         while (!ringBufferIsEmpty()) {
             uint256 burnTokenId = popFromRingBuffer();
             address shareOwner = shares.ownerOf(burnTokenId);
-            qsat.mint(shareOwner, blockRewardPerShare);
+            qsatBridge.pegInQSAT(shareOwner, blockRewardPerShare);
             shares.burn(burnTokenId);
         }
 

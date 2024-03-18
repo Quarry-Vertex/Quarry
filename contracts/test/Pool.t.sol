@@ -74,7 +74,7 @@ contract PoolTest is Test {
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSAT);
     }
 
     function test_initialChainTip() public {
@@ -351,7 +351,7 @@ contract PoolTest is Test {
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSAT);
         vm.startPrank(oracleAddress);
 
         // create addresses
@@ -452,7 +452,7 @@ contract PoolTest is Test {
         share = Share(proxyShare);
         qsat = QSAT(proxyQSAT);
         pool.setShareContract(proxyShare);
-        pool.setQSATContract(proxyQSAT);
+        pool.setQSATBridgeContract(proxyQSAT);
         vm.startPrank(oracleAddress);
 
         // create addresses
