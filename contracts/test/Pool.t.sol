@@ -1032,8 +1032,7 @@ contract PoolTest is Test {
         );
 
         pool.submitBlock(block1, merklePath, account1);
-        // force the block to have the wrong peg in address
-        block1.outputAddress = incorrectAddress;
+        createAndSetChainTip("D", txAB, bits, incorrectAddress, blockReward);
         vm.expectRevert("Block's output address does not match quarry peg in address");
         pool.distributeRewards(block1.header.merkleRootHash);
     }
