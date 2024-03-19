@@ -100,14 +100,14 @@ contract PoolTest is Test {
 
     function test_setChainTip() public {
         vm.startPrank(oracleAddress);
-        Pool.BitcoinBlock memory newTip = createTestBlock(1, 2, "A", 0, 0, 0);
+        Pool.BitcoinBlock memory newTip = createTestBlock("block 0", "block 1", "A", 0, 0, 0);
         pool.setChainTip(newTip);
 
         Pool.BitcoinBlock memory chainTip = pool.getChainTip();
         vm.stopPrank();
 
-        assertEq(chainTip.header.blockHash, bytes32(1), "Current block hash should be 1");
-        assertEq(chainTip.header.previousBlockHash, bytes32(2), "Previous block hash should be 2");
+        assertEq(chainTip.header.blockHash, bytes32("block 0"), "Current block hash should be 1");
+        assertEq(chainTip.header.previousBlockHash, bytes32("block 1"), "Previous block hash should be 2");
         assertEq(chainTip.header.merkleRootHash, bytes32("A"), "Merkle root hash should be A");
     }
 
@@ -143,8 +143,8 @@ contract PoolTest is Test {
         assertTrue(pool.spvProof(merklePath, txAB), "Valid SPV proof should pass");
 
         // set initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         vm.stopPrank();
 
@@ -155,6 +155,7 @@ contract PoolTest is Test {
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             txAB,           // merkleRootHash
             bits,           // bits
@@ -183,8 +184,8 @@ contract PoolTest is Test {
         merklePath[1] = txB;
 
         // set initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
@@ -193,6 +194,7 @@ contract PoolTest is Test {
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             "wrong",        // merkleRootHash (wrong)
             bits,           // bits
@@ -222,8 +224,8 @@ contract PoolTest is Test {
         merklePath[1] = txB;
 
         // set initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "Wrong", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
@@ -232,8 +234,9 @@ contract PoolTest is Test {
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
-            "D",            // previousBlockHash
-            txAB,           // merkleRootHash (wrong)
+            "Block1",       // block hash
+            "C",            // previousBlockHash
+            txAB,           // merkleRootHash
             bits,           // bits
             outputAddress,  // outputAddress
             blockReward     // blockReward
@@ -261,8 +264,8 @@ contract PoolTest is Test {
         merklePath[1] = txB;
 
         // set the initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         // create block params
         // wrong, different from peg in
@@ -272,8 +275,9 @@ contract PoolTest is Test {
 
         // instantiate a block
         Pool.BitcoinBlock memory curBlock = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
-            txAB,           // merkleRootHash (wrong)
+            txAB,           // merkleRootHash
             bits,           // bits
             outputAddress,  // outputAddress
             blockReward     // blockReward
@@ -301,8 +305,8 @@ contract PoolTest is Test {
         merklePath[1] = txB;
 
         // set initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
@@ -316,6 +320,7 @@ contract PoolTest is Test {
 
         // instantiate blocks
         Pool.BitcoinBlock memory block1 = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             txAB,           // merkleRootHash
             bits,           // bits
@@ -324,7 +329,7 @@ contract PoolTest is Test {
         );
 
         pool.submitBlock(block1, merklePath, account1);
-        createAndSetChainTip("D", txAB, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block1", "D", txAB, bits, outputAddress, blockReward);
 
         /* Block 2 */
 
@@ -334,14 +339,15 @@ contract PoolTest is Test {
         bytes32 txCD = sha256(abi.encodePacked(sha256(abi.encodePacked(txC, txD))));
 
         Pool.BitcoinBlock memory block2 = createTestBlock(
-            txAB,           // previousBlockHash
-            txAB,           // merkleRootHash (wrong)
+            "Block1",       // block hash (same as block 1)
+            "Block1",       // previousBlockHash
+            txCD,           // merkleRootHash
             bits,           // bits
             outputAddress,  // outputAddress
             blockReward     // blockReward
         );
 
-        createAndSetChainTip(txAB, txCD, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block1", "Block1", txCD, bits, outputAddress, blockReward);
         vm.expectRevert("Block hash has already been submitted");
         pool.submitBlock(block2, merklePath, account2);
     }
@@ -383,8 +389,8 @@ contract PoolTest is Test {
         address account3 = address(bytes20(keccak256(abi.encode(block.timestamp + 500))));
 
         // set some initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         /* Block 1 */
 
@@ -405,6 +411,7 @@ contract PoolTest is Test {
         uint32 bits = 0x1b0404cb;
 
         Pool.BitcoinBlock memory block1 = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             txAB,           // merkleRootHash
             bits,           // bits
@@ -412,7 +419,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
         assertTrue(pool.submitBlock(block1, merklePath, account1), "Block 1 was not successfully submitted");
-        createAndSetChainTip("D", txAB, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block1", "D", txAB, bits, outputAddress, blockReward);
 
         /* Block 2 */
 
@@ -424,11 +431,11 @@ contract PoolTest is Test {
         merklePath[1] = txD;
 
         Pool.BitcoinBlock memory block2 = createTestBlock(
-            txAB, txCD, bits, outputAddress, blockReward
+            "Block2", "Block1", txCD, bits, outputAddress, blockReward
         );
 
         assertTrue(pool.submitBlock(block2, merklePath, account2), "Block 2 was not successfully submitted");
-        createAndSetChainTip(txAB, txCD, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block2", "Block1", txCD, bits, outputAddress, blockReward);
 
         assertEq(share.ownerOf(0), account1, "Owner of share id 0 should be account1");
         assertEq(share.ownerOf(1), account2, "Owner of share id 1 should be account2");
@@ -443,11 +450,11 @@ contract PoolTest is Test {
         merklePath[1] = txF;
 
         Pool.BitcoinBlock memory block3 = createTestBlock(
-            txCD, txEF, bits, outputAddress, blockReward
+            "Block3", "Block2", txEF, bits, outputAddress, blockReward
         );
         pool.submitBlock(block3, merklePath, account3);
 
-        createAndSetChainTip(txCD, txEF, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block3", "Block2", txEF, bits, outputAddress, blockReward);
 
         assertFalse(share.tokenExists(0), "Pool share id 0 should not exist");
         assertEq(share.ownerOf(1), account2, "Owner of share id 1 should be account2");
@@ -497,8 +504,8 @@ contract PoolTest is Test {
         address account7 = address(bytes20(keccak256(abi.encode(block.timestamp + 900))));
 
         // set some initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         /* Block 1 */
 
@@ -520,6 +527,7 @@ contract PoolTest is Test {
         uint32 bits = 0x1b0404cb;
 
         Pool.BitcoinBlock memory block1 = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             txAB,           // merkleRootHash
             bits,           // bits
@@ -527,7 +535,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
         assertTrue(pool.submitBlock(block1, merklePath, account1), "Block 1 was not successfully submitted");
-        createAndSetChainTip("D", txAB, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block1", "D", txAB, bits, outputAddress, blockReward);
 
         /* Block 2 */
 
@@ -540,14 +548,14 @@ contract PoolTest is Test {
         merklePath[1] = txD;
 
         Pool.BitcoinBlock memory block2 = createTestBlock(
-            txAB, txCD, bits, outputAddress, blockReward
+            "Block2", "Block1", txCD, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block2, merklePath, account2), "Block 2 was not successfully submitted");
 
         assertEq(share.ownerOf(0), account1, "Owner of share id 0 should be account1");
         assertEq(share.ownerOf(1), account2, "Owner of share id 2 should be account2");
 
-        createAndSetChainTip(txAB, txCD, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block2", "Block1", txCD, bits, outputAddress, blockReward);
 
         /* Block 3 */
 
@@ -560,11 +568,11 @@ contract PoolTest is Test {
         merklePath[1] = txF;
 
         Pool.BitcoinBlock memory block3 = createTestBlock(
-            txCD, txEF, bits, outputAddress, blockReward
+            "Block3", "Block2", txEF, bits, outputAddress, blockReward
         );
         pool.submitBlock(block3, merklePath, account3);
 
-        createAndSetChainTip(txCD, txEF, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block3", "Block2", txEF, bits, outputAddress, blockReward);
 
         /* Block 4 */
 
@@ -576,11 +584,11 @@ contract PoolTest is Test {
         merklePath[1] = txH;
 
         Pool.BitcoinBlock memory block4 = createTestBlock(
-            txEF, txGH, bits, outputAddress, blockReward
+            "Block4", "Block3", txGH, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block4, merklePath, account4), "Block 4 was not successfully submitted");
 
-        createAndSetChainTip(txEF, txGH, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block4", "Block3", txGH, bits, outputAddress, blockReward);
 
         /* Block 5 */
 
@@ -592,11 +600,11 @@ contract PoolTest is Test {
         merklePath[1] = txJ;
 
         Pool.BitcoinBlock memory block5 = createTestBlock(
-            txGH, txIJ, bits, outputAddress, blockReward
+            "Block5", "Block4", txIJ, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block5, merklePath, account5), "Block 5 was not successfully submitted");
 
-        createAndSetChainTip(txGH, txIJ, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block5", "Block4", txIJ, bits, outputAddress, blockReward);
 
         /* Block 6 */
 
@@ -608,11 +616,11 @@ contract PoolTest is Test {
         merklePath[1] = txL;
 
         Pool.BitcoinBlock memory block6 = createTestBlock(
-            txIJ, txKL, bits, outputAddress, blockReward
+            "Block6", "Block5", txKL, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block6, merklePath, account6), "Block 6 was not successfully submitted");
 
-        createAndSetChainTip(txIJ, txKL, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block6", "Block5", txKL, bits, outputAddress, blockReward);
 
         /* Block 7 */
 
@@ -624,17 +632,17 @@ contract PoolTest is Test {
         merklePath[1] = txN;
 
         Pool.BitcoinBlock memory block7 = createTestBlock(
-            txKL, txMN, bits, outputAddress, blockReward
+            "Block7", "Block6", txMN, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block7, merklePath, account7), "Block 7 was not successfully submitted");
 
-        createAndSetChainTip(txKL, txMN, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block7", "Block6", txMN, bits, outputAddress, blockReward);
 
         vm.stopPrank();
 
         // Expect 1000 to be distributed to addresses 3-7
         // because 1 and 2 got evicted from the ring buffer
-        pool.distributeRewards(block1.header.merkleRootHash);
+        pool.distributeRewards(block1.header.blockHash);
 
         assertEq(qsat.balanceOf(account1), 0, "address1 should not have been rewarded any QSAT");
         assertEq(qsat.balanceOf(account2), 0, "address2 should not have been rewarded any QSAT");
@@ -694,8 +702,8 @@ contract PoolTest is Test {
         address account6 = address(bytes20(keccak256(abi.encode(block.timestamp + 900))));
 
         // set some initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         /* Block 1 */
 
@@ -717,6 +725,7 @@ contract PoolTest is Test {
         uint32 bits = 0x1b0404cb;
 
         Pool.BitcoinBlock memory block1 = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             txAB,           // merkleRootHash
             bits,           // bits
@@ -724,7 +733,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
         assertTrue(pool.submitBlock(block1, merklePath, account1), "Block 1 was not successfully submitted");
-        createAndSetChainTip("D", txAB, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block1", "D", txAB, bits, outputAddress, blockReward);
 
         /* Block 2 */
 
@@ -737,14 +746,14 @@ contract PoolTest is Test {
         merklePath[1] = txD;
 
         Pool.BitcoinBlock memory block2 = createTestBlock(
-            txAB, txCD, bits, outputAddress, blockReward
+            "Block2", "Block1", txCD, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block2, merklePath, account2), "Block 2 was not successfully submitted");
 
         assertEq(share.ownerOf(0), account1, "Owner of share id 0 should be account1");
         assertEq(share.ownerOf(1), account2, "Owner of share id 2 should be account2");
 
-        createAndSetChainTip(txAB, txCD, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block2", "Block1", txCD, bits, outputAddress, blockReward);
 
         /* Block 3 */
 
@@ -757,11 +766,11 @@ contract PoolTest is Test {
         merklePath[1] = txF;
 
         Pool.BitcoinBlock memory block3 = createTestBlock(
-            txCD, txEF, bits, outputAddress, blockReward
+            "Block3", "Block2", txEF, bits, outputAddress, blockReward
         );
         pool.submitBlock(block3, merklePath, account3);
 
-        createAndSetChainTip(txCD, txEF, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block3", "Block2", txEF, bits, outputAddress, blockReward);
 
         /* Block 4 */
 
@@ -773,11 +782,11 @@ contract PoolTest is Test {
         merklePath[1] = txH;
 
         Pool.BitcoinBlock memory block4 = createTestBlock(
-            txEF, txGH, bits, outputAddress, blockReward
+            "Block4", "Block3", txGH, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block4, merklePath, account4), "Block 4 was not successfully submitted");
 
-        createAndSetChainTip(txEF, txGH, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block4", "Block3", txGH, bits, outputAddress, blockReward);
 
         /* Block 5 */
 
@@ -789,11 +798,11 @@ contract PoolTest is Test {
         merklePath[1] = txJ;
 
         Pool.BitcoinBlock memory block5 = createTestBlock(
-            txGH, txIJ, bits, outputAddress, blockReward
+            "Block5", "Block4", txIJ, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block5, merklePath, account5), "Block 5 was not successfully submitted");
 
-        createAndSetChainTip(txGH, txIJ, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block5", "Block4", txIJ, bits, outputAddress, blockReward);
 
         /* Block 6 */
 
@@ -805,11 +814,11 @@ contract PoolTest is Test {
         merklePath[1] = txL;
 
         Pool.BitcoinBlock memory block6 = createTestBlock(
-            txIJ, txKL, bits, outputAddress, blockReward
+            "Block6", "Block5", txKL, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block6, merklePath, account6), "Block 6 was not successfully submitted");
 
-        createAndSetChainTip(txIJ, txKL, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block6", "Block5", txKL, bits, outputAddress, blockReward);
 
         /* Block 7 */
 
@@ -821,16 +830,16 @@ contract PoolTest is Test {
         merklePath[1] = txN;
 
         Pool.BitcoinBlock memory block7 = createTestBlock(
-            txKL, txMN, bits, outputAddress, blockReward
+            "Block7", "Block6", txMN, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block7, merklePath, account3), "Block 7 was not successfully submitted");
 
-        createAndSetChainTip(txKL, txMN, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block7", "Block6", txMN, bits, outputAddress, blockReward);
         vm.stopPrank();
 
         // Expect 1000 to be distributed to addresses 3-7
         // because 1 and 2 got evicted from the ring buffer
-        pool.distributeRewards(block1.header.merkleRootHash);
+        pool.distributeRewards(block1.header.blockHash);
 
         assertEq(qsat.balanceOf(account1), 0, "address1 should not have been rewarded any QSAT");
         assertEq(qsat.balanceOf(account2), 0, "address2 should not have been rewarded any QSAT");
@@ -890,8 +899,8 @@ contract PoolTest is Test {
         address account7 = address(bytes20(keccak256(abi.encode(block.timestamp + 800))));
 
         // set some initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         /* Block 1 */
 
@@ -913,6 +922,7 @@ contract PoolTest is Test {
         uint32 bits = 0x1b0404cb;
 
         Pool.BitcoinBlock memory block1 = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             txAB,           // merkleRootHash
             bits,           // bits
@@ -920,7 +930,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
         assertTrue(pool.submitBlock(block1, merklePath, account1), "Block 1 was not successfully submitted");
-        createAndSetChainTip("D", txAB, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block1", "D", txAB, bits, outputAddress, blockReward);
 
         /* Block 2 */
 
@@ -933,14 +943,14 @@ contract PoolTest is Test {
         merklePath[1] = txD;
 
         Pool.BitcoinBlock memory block2 = createTestBlock(
-            txAB, txCD, bits, outputAddress, blockReward
+            "Block2", "Block1", txCD, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block2, merklePath, account2), "Block 2 was not successfully submitted");
 
         assertEq(share.ownerOf(0), account1, "Owner of share id 0 should be account1");
         assertEq(share.ownerOf(1), account2, "Owner of share id 2 should be account2");
 
-        createAndSetChainTip(txAB, txCD, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block2", "Block1", txCD, bits, outputAddress, blockReward);
 
         /* Block 3 */
 
@@ -953,11 +963,11 @@ contract PoolTest is Test {
         merklePath[1] = txF;
 
         Pool.BitcoinBlock memory block3 = createTestBlock(
-            txCD, txEF, bits, outputAddress, blockReward
+            "Block3", "Block2", txEF, bits, outputAddress, blockReward
         );
         pool.submitBlock(block3, merklePath, account3);
 
-        createAndSetChainTip(txCD, txEF, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block3", "Block2", txEF, bits, outputAddress, blockReward);
 
         /* Block 4 */
 
@@ -969,11 +979,11 @@ contract PoolTest is Test {
         merklePath[1] = txH;
 
         Pool.BitcoinBlock memory block4 = createTestBlock(
-            txEF, txGH, bits, outputAddress, blockReward
+            "Block4", "Block3", txGH, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block4, merklePath, account4), "Block 4 was not successfully submitted");
 
-        createAndSetChainTip(txEF, txGH, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block4", "Block3", txGH, bits, outputAddress, blockReward);
 
         /* Block 5 */
 
@@ -985,11 +995,11 @@ contract PoolTest is Test {
         merklePath[1] = txJ;
 
         Pool.BitcoinBlock memory block5 = createTestBlock(
-            txGH, txIJ, bits, outputAddress, blockReward
+            "Block5", "Block4", txIJ, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block5, merklePath, account5), "Block 5 was not successfully submitted");
 
-        createAndSetChainTip(txGH, txIJ, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block5", "Block4", txIJ, bits, outputAddress, blockReward);
 
         /* Block 6 */
 
@@ -1001,11 +1011,11 @@ contract PoolTest is Test {
         merklePath[1] = txL;
 
         Pool.BitcoinBlock memory block6 = createTestBlock(
-            txIJ, txKL, bits, outputAddress, blockReward
+            "Block6", "Block5", txKL, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block6, merklePath, account6), "Block 6 was not successfully submitted");
 
-        createAndSetChainTip(txIJ, txKL, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block6", "Block5", txKL, bits, outputAddress, blockReward);
 
         /* Block 7 */
 
@@ -1017,15 +1027,15 @@ contract PoolTest is Test {
         merklePath[1] = txN;
 
         Pool.BitcoinBlock memory block7 = createTestBlock(
-            txKL, txMN, bits, outputAddress, blockReward
+            "Block7", "Block6", txMN, bits, outputAddress, blockReward
         );
         assertTrue(pool.submitBlock(block7, merklePath, account7), "Block 7 was not successfully submitted");
 
-        createAndSetChainTip(txKL, txMN, bits, outputAddress, blockReward);
+        createAndSetChainTip("Block7", "Block6", txMN, bits, outputAddress, blockReward);
         vm.stopPrank();
 
         // Expect 1000 to be distributed to all addresses
-        pool.distributeRewards(block1.header.merkleRootHash);
+        pool.distributeRewards(block1.header.blockHash);
 
         assertEq(qsat.balanceOf(account1), 10000, "address1 should have been rewarded 20000 QSAT");
         assertEq(qsat.balanceOf(account2), 10000, "address2 should have been rewarded 10000 QSAT");
@@ -1059,8 +1069,8 @@ contract PoolTest is Test {
         merklePath[1] = txB;
 
         // set initial chain tips
-        createAndSetChainTip(0, "C", 0, 0, 0);
-        createAndSetChainTip("C", "D", 0, 0, 0);
+        createAndSetChainTip("C", 0, 0, 0, 0, 0);
+        createAndSetChainTip("D", "C", 0, 0, 0, 0);
 
         // create block params
         bytes32 outputAddress = bytes32(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
@@ -1074,6 +1084,7 @@ contract PoolTest is Test {
 
         // instantiate blocks
         Pool.BitcoinBlock memory block1 = createTestBlock(
+            "Block1",       // block hash
             "D",            // previousBlockHash
             txAB,           // merkleRootHash
             bits,           // bits
@@ -1082,8 +1093,8 @@ contract PoolTest is Test {
         );
 
         pool.submitBlock(block1, merklePath, account1);
-        createAndSetChainTip("D", txAB, bits, incorrectAddress, blockReward);
+        createAndSetChainTip("Block1", "D", txAB, bits, incorrectAddress, blockReward);
         vm.expectRevert("Block's output address does not match quarry peg in address");
-        pool.distributeRewards(block1.header.merkleRootHash);
+        pool.distributeRewards(block1.header.blockHash);
     }
 }
