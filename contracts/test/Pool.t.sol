@@ -26,6 +26,7 @@ contract PoolTest is Test {
 
     // Helper methods
     function createTestBlock(
+        bytes32 blockHash,
         bytes32 previousBlockHash,
         bytes32 merkleRootHash,
         uint32 bits,
@@ -34,6 +35,7 @@ contract PoolTest is Test {
     ) public pure returns (Pool.BitcoinBlock memory) {
         // create a block header
         Pool.BlockHeader memory blockHeader;
+        blockHeader.blockHash = blockHash;
         blockHeader.previousBlockHash = previousBlockHash;
         blockHeader.merkleRootHash = merkleRootHash;
         blockHeader.bits = bits;
@@ -47,13 +49,14 @@ contract PoolTest is Test {
     }
 
     function createAndSetChainTip(
+        bytes32 blockHash,
         bytes32 previousBlockHash,
         bytes32 merkleRootHash,
         uint32 bits,
         bytes32 outputAddress,
         uint256 blockReward
     ) public {
-        Pool.BitcoinBlock memory newTip = createTestBlock(previousBlockHash, merkleRootHash, bits, outputAddress, blockReward);
+        Pool.BitcoinBlock memory newTip = createTestBlock(blockHash, previousBlockHash, merkleRootHash, bits, outputAddress, blockReward);
         pool.setChainTip(newTip);
     }
 
@@ -90,19 +93,21 @@ contract PoolTest is Test {
     function test_initialChainTip() public {
         vm.prank(oracleAddress);
         Pool.BitcoinBlock memory chainTip = pool.getChainTip();
+        assertEq(chainTip.header.blockHash, bytes32(0), "Initial block hash should be 0");
         assertEq(chainTip.header.previousBlockHash, bytes32(0), "Initial previous block hash should be 0");
         assertEq(chainTip.header.merkleRootHash, bytes32(0), "Initial merkle root hash should be 0");
     }
 
     function test_setChainTip() public {
         vm.startPrank(oracleAddress);
-        Pool.BitcoinBlock memory newTip = createTestBlock(0, "A", 0, 0, 0);
+        Pool.BitcoinBlock memory newTip = createTestBlock(1, 2, "A", 0, 0, 0);
         pool.setChainTip(newTip);
 
         Pool.BitcoinBlock memory chainTip = pool.getChainTip();
         vm.stopPrank();
 
-        assertEq(chainTip.header.previousBlockHash, bytes32(0), "Previous block hash should be 0");
+        assertEq(chainTip.header.blockHash, bytes32(1), "Current block hash should be 1");
+        assertEq(chainTip.header.previousBlockHash, bytes32(2), "Previous block hash should be 2");
         assertEq(chainTip.header.merkleRootHash, bytes32("A"), "Merkle root hash should be A");
     }
 
