@@ -67,31 +67,6 @@ async fn main() {
         let bits_bytes = hex::decode(bits_hex_str).unwrap();
         let bits = u32::from_be_bytes(bits_bytes.try_into().unwrap());
 
-        /*
-         * let bits: [u8; 32] = H256::from_slice(
-         *     &hex::decode(
-         *         best_block["header"]["bits"]
-         *             .as_str()
-         *             .unwrap()
-         *             .trim_start_matches("0x"),
-         *     )
-         *     .unwrap(),
-         * )
-         * .into();
-         */
-
-        /*
-         * let output_address: [u8; 32] = H256::from_slice(
-         *     &hex::decode(
-         *         best_block["address"]
-         *             .as_str()
-         *             .unwrap()
-         *             .trim_start_matches("0x"),
-         *     )
-         *     .unwrap(),
-         * )
-         * .into();
-         */
         // Assuming best_block["address"] is a String containing the Bitcoin address
         let address_str = best_block["address"].as_str().unwrap().trim_start_matches("0x");
 
@@ -105,29 +80,16 @@ async fn main() {
         let output_address: [u8; 32] = address_bytes.try_into().unwrap();
 
 
-        /*
-         * let block_reward: [u8; 8] = H256::from_slice(
-         *     &hex::decode(
-         *         best_block["value"]
-         *             .as_str()
-         *             .unwrap(),
-         *     )
-         *     .unwrap(),
-         * )
-         * .into();
-         */
-        let hex_str = best_block["value"].as_str().unwrap();
-        // does this work with other lenghts (works with len == 3)
-        let padded_hex_str = if hex_str.len() % 2 == 1 {
-            format!("0{}", hex_str)
-        } else {
-            hex_str.to_string()
-        };
+        // unwrap as u64
+        let value_u64 = best_block["value"]
+            .as_str()
+            .unwrap()
+            .parse::<u64>()
+            .unwrap();
+        // convert to solidity U256
+        let block_reward = U256::from(value_u64);
 
-        let mut bytes = hex::decode(&padded_hex_str).unwrap();
-        bytes.resize(8, 0);
-        let block_reward: [u8; 8] = bytes.try_into().unwrap();
-
+        // create params for Pools function
         let header = BlockHeader {
             previous_block_hash,
             merkle_root_hash,
@@ -140,9 +102,9 @@ async fn main() {
         };
 
         println!("Best Hash: {:?}", best_hash);
-        println!("----");
         if previous_merkle != merkle_root_hash {
             println!("Best Block: {:?}", best_block);
+            println!("{:?}", chain_tip);
             let tx = pool.set_chain_tip(chain_tip);
             let tx = tx.send().await.unwrap();
             let receipt = tx.await.unwrap();
