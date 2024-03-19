@@ -17,7 +17,7 @@ abstract contract SPVProof {
         the Merkle path would be the hash of B (sibling of A) and CD (sibling of AB)
         represented as an array: [B, CD].
     */
-    function spvProof(bytes32[] memory merklePath, bytes32 blockHash) public pure returns (bool success) {
+    function spvProof(bytes32[] memory merklePath, bytes32 merkleRootHash) public pure returns (bool success) {
 
         bytes32 curHash = merklePath[0]; // this is wrong, need to get the tx hash
         for (uint256 i = 1; i < merklePath.length; i++) { // walk the merkle path
@@ -30,7 +30,7 @@ abstract contract SPVProof {
                 curHash = sha256(abi.encodePacked(sha256(abi.encodePacked(sibling, curHash))));
             }
         }
-        require(curHash == blockHash, "SPV proof failed");
+        require(curHash == merkleRootHash, "SPV proof failed");
 
         return true;
     }

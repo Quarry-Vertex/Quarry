@@ -65,7 +65,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     BitcoinBlock public chainTip;
 
     event ChainTipSet(
-        bytes32 merkleRootHash
+        bytes32 blockHash
     );
 
     event HashCommitted(
@@ -83,6 +83,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     );
 
     struct BlockHeader {
+        bytes32 blockHash;
         bytes32 previousBlockHash;
         bytes32 merkleRootHash;
         uint32 bits;
@@ -119,7 +120,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
         BitcoinBlock memory firstChainTip;
         BlockHeader memory firstHeader;
-        firstHeader.merkleRootHash = "";
+        firstHeader.blockHash = "";
         firstChainTip.header = firstHeader;
         chainTip = firstChainTip;
 
@@ -127,22 +128,22 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     }
 
     function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
-        if (chainTip.header.merkleRootHash != "") {
-          require(_chainTip.header.previousBlockHash == chainTip.header.merkleRootHash,
+        if (chainTip.header.blockHash != "") {
+          require(_chainTip.header.previousBlockHash == chainTip.header.blockHash,
                   "New chain tip prev block hash does not match current chain tip block hash");
         }
 
         chainTip = _chainTip;
 
-        emit ChainTipSet(_chainTip.header.merkleRootHash);
+        emit ChainTipSet(_chainTip.header.blockHash);
 
         // increment number of confirmations for each block
         for (uint256 i = 0; i < blockHashes.length; i++) {
             confirmations[blockHashes[i]]++;
         }
 
-        blocks[_chainTip.header.merkleRootHash] = _chainTip;
-        blockHashes.push(_chainTip.header.merkleRootHash);
+        blocks[_chainTip.header.blockHash] = _chainTip;
+        blockHashes.push(_chainTip.header.blockHash);
     }
 
     function getChainTip() public onlyOracle view returns (BitcoinBlock memory tip) {
@@ -184,7 +185,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
     function submitBlock(BitcoinBlock memory _block, bytes32[] memory _merklePath, address _account) public returns (bool success) {
-        bytes32 blockHash = _block.header.merkleRootHash;
+        bytes32 blockHash = _block.header.blockHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
             commits[blockHash] != _account,
@@ -202,14 +203,14 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
         // check that previous block hash is the bitcoin chain tip for the fork with the most accumulated PoW
         bytes32 prevHash = _block.header.previousBlockHash;
-        require(prevHash == chainTip.header.merkleRootHash, "Submitted block is stale");
+        require(prevHash == chainTip.header.blockHash, "Submitted block is stale");
 
         // Check that the Coinbase tx is pointed to current peg in address of the mining pool
         require(_block.outputAddress == quarryPegInAddress,
             "Coinbase transaction does not point to quarry peg in address");
 
         // SPV Proof TODO: Confirm this logic is correct
-        spvProof(_merklePath, blockHash);
+        spvProof(_merklePath, _block.header.merkleRootHash);
 
         usedBlockHashes[blockHash] = true;
 
@@ -223,7 +224,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
         confirmations[blockHash] = 0;
 
-        emit BlockRevealed(_block.header.merkleRootHash, _account);
+        emit BlockRevealed(_block.header.blockHash, _account);
 
         return true;
     }
