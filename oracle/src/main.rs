@@ -37,8 +37,17 @@ async fn main() {
         let best_block = get_best_block(&client, &deployment.btc_rpc_url, &best_hash)
             .await
             .unwrap();
-        // println!("Best Hash: {:?}", best_hash);
-        // println!("Best Block: {:?}", best_block);
+
+        let block_hash: [u8; 32] = H256::from_slice(
+            &hex::decode(
+                best_block["header"]["blockHash"]
+                    .as_str()
+                    .unwrap()
+                    .trim_start_matches("0x"),
+            )
+            .unwrap(),
+        )
+        .into();
 
         let previous_block_hash: [u8; 32] = H256::from_slice(
             &hex::decode(
@@ -91,6 +100,7 @@ async fn main() {
 
         // create params for Pools function
         let header = BlockHeader {
+            block_hash,
             previous_block_hash,
             merkle_root_hash,
             bits,
@@ -104,7 +114,6 @@ async fn main() {
         println!("Best Hash: {:?}", best_hash);
         if previous_merkle != merkle_root_hash {
             println!("Best Block: {:?}", best_block);
-            println!("{:?}", chain_tip);
             let tx = pool.set_chain_tip(chain_tip);
             let tx = tx.send().await.unwrap();
             let receipt = tx.await.unwrap();
@@ -173,6 +182,7 @@ async fn get_best_block(
     // return serialized data for SC
     Ok(json!({
         "header": {
+            "blockHash": hash,
             "previousBlockHash": prev_hash,
             "merkleRootHash": merkle_root,
             "bits": bits,
