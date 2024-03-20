@@ -1,4 +1,3 @@
-use regex::Regex;
 use serde_json::{json, Value};
 
 // get transactions for peg wallet
