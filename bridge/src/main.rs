@@ -36,8 +36,6 @@ async fn main() {
         provider.interval(Duration::from_millis(500)),
         wallet,
     ));
-    // Will be moved to another Binary
     let qsat_bridge = QSATBridge::new(deployment.qsat_bridge, provider.clone());
     let event = qsat_bridge.event::<PegOutQSATEventFilter>();
-    // ------------------------------
 }
