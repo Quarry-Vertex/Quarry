@@ -17,9 +17,9 @@ async fn main() {
     // (todo) take in
     let peg_in =  "bc1qxhmdufsvnuaaaer4ynz88fspdsxq2h9e9cetdj";
     let endpoint =  "https://dark-icy-putty.btc.quiknode.pro/c312ce60f2c274142fe6c7c08cb3999c3ae354eb/";
-    let tx_json = peg_in::get_peg_transactions(&client, peg_in).await.unwrap();
     let mut latest_tx_id = "";
     //loop {
+        let tx_json = peg_in::get_peg_transactions(&client, peg_in).await.unwrap();
         // call this val tx_unsent
         let peg_in_txs = peg_in::parse_transactions(&client, latest_tx_id, &tx_json, endpoint, "bc1qxhmdufsvnuaaaer4ynz88fspdsxq2h9e9cetdj").await;
         let tx_id = tx_json[0]["txid"].as_str().unwrap(); 
