@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "quarry-sdk",
-    "chain-tip-oracle", "quarry-scripts", "peg-in-oracle", "peg-out-oracle",
+    "oracle", "quarry-scripts", "bridge",
 ]
 
 resolver = "2"
