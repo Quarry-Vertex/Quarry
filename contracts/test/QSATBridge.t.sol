@@ -49,7 +49,7 @@ contract QSATBridgeTest is Test {
 
     function test_pegInQSAT() public {
         vm.expectEmit();
-        emit QSATBridge.PegInQSAT(testAddress, 10000);
+        emit QSATBridge.PegInQSATEvent(testAddress, 10000);
 
         vm.prank(oracleAddress);
         qsatBridge.pegInQSAT(testAddress, 10000);
@@ -66,7 +66,7 @@ contract QSATBridgeTest is Test {
         qsat.approve(proxyQSATBridge, 5000);
 
         vm.expectEmit();
-        emit QSATBridge.PegOutQSAT(testBTCAddress, 5000);
+        emit QSATBridge.PegOutQSATEvent(testBTCAddress, 5000);
 
         vm.prank(testAddress);
         qsatBridge.pegOutQSAT(testBTCAddress, 5000);

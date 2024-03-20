@@ -21,12 +21,12 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
         _;
     }
 
-    event PegInQSAT(
+    event PegInQSATEvent(
         address ethAddress,
         uint256 amount
     );
 
-    event PegOutQSAT(
+    event PegOutQSATEvent(
         bytes32 btcAddress,
         uint256 amount
     );
@@ -50,7 +50,7 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
 
         qsat.transfer(ethAddress, amount);
 
-        emit PegInQSAT(ethAddress, amount);
+        emit PegInQSATEvent(ethAddress, amount);
     }
 
     // Anyone can call this method to peg out (Note: MUST approve transfer of amount of tokens to the Bridge contract)
@@ -62,6 +62,6 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
         require(qsat.transferFrom(msg.sender, address(this), amount),
             "Token transfer failed. Please ensure QSAT to be pegged out has been approved");
 
-        emit PegOutQSAT(btcAddress, amount);
+        emit PegOutQSATEvent(btcAddress, amount);
     }
 }
