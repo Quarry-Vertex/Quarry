@@ -31,6 +31,13 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
         uint256 amount
     );
 
+    struct BurnRequest{
+        bytes32 btcAddress;
+        uint256 amount;
+    }
+
+    BurnRequest[] public burnRequests;
+
     function setQSATContract(address _qsatAddress) public onlyOwner {
         qsat = QSAT(_qsatAddress);
     }
@@ -55,6 +62,9 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
 
     // Anyone can call this method to peg out (Note: MUST approve transfer of amount of tokens to the Bridge contract)
     // Oracle is responsible for subscribing to PegOutSAT events to send BTC to the recipient
+    // change to push into an array
+    // implement bridge this way
+    // store each peg out event into an array
     function pegOutQSAT(bytes32 btcAddress, uint256 amount) public {
         require(qsat.balanceOf(msg.sender) >= amount,
             "Address has insufficient QSATs to peg out this amount");
@@ -62,6 +72,7 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
         require(qsat.transferFrom(msg.sender, address(this), amount),
             "Token transfer failed. Please ensure QSAT to be pegged out has been approved");
 
-        emit PegOutQSATEvent(btcAddress, amount);
+        // add the burn request to the Array
+        burnRequests.push(BurnRequest(btcAddress, amount));
     }
 }

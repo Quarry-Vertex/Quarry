@@ -1,4 +1,8 @@
+use eth_checksum::checksum;
+use ethers::prelude::*;
+use quarry_sdk::bindings::qsat_bridge::QSATBridge;
 use serde_json::{json, Value};
+use std::str::FromStr;
 
 // get transactions for peg wallet
 pub async fn get_peg_transactions(
@@ -7,16 +11,12 @@ pub async fn get_peg_transactions(
 ) -> Result<Vec<Value>, reqwest::Error> {
     let endpoint = format!("https://blockstream.info/api/address/{}/txs", address);
 
-    let tx_res: Value = client
-        .get(&endpoint)
-        .send()
-        .await?
-        .json()
-        .await?;
+    let tx_res: Value = client.get(&endpoint).send().await?.json().await?;
 
     let mut len = tx_res.clone().as_array().unwrap().len();
-    if len > 25 {
-        len = 25;
+    if len > 5 {
+        // 25 later
+        len = 5;
     }
     let tx_vec: Vec<Value> = tx_res.clone().as_array().unwrap()[0..len].to_vec();
 
@@ -26,7 +26,7 @@ pub async fn get_peg_transactions(
 #[derive(Debug)]
 pub struct PegTx {
     value: String,
-    eth_address: String,
+    eth_address: H160,
 }
 
 /*
@@ -46,11 +46,11 @@ pub async fn parse_transactions(
     let mut peg_txs = Vec::new();
 
     for tx in tx_vec {
-        let tx_id = tx["txid"].as_str().unwrap(); 
+        let tx_id = tx["txid"].as_str().unwrap();
         if tx_id == latest_tx {
-            break
+            break;
         }
-        let tx_res: Value = client
+        let mut tx_res: Value = client
             .post(endpoint)
             .json(&json!({
                 "method": "getrawtransaction",
@@ -61,28 +61,34 @@ pub async fn parse_transactions(
             .json()
             .await?;
 
-        // find random eth address for this
-        // tx_res["result"]["vout"][0]["scriptPubKey"]["asm"] = "OP_RETURN OP_PUSHBYTES_20 ";
+        // using anvil account (9) for testing
+        tx_res["result"]["vout"][0]["scriptPubKey"]["asm"] = Value::String(
+            "OP_RETURN OP_PUSHBYTES_20 a0Ee7A142d267C1f36714E4a8F75612F20a79720".to_string(),
+        );
 
         // run through every "vout" until you find OP_RETURN
         for v in tx_res["result"]["vout"].as_array().unwrap() {
             // ensure address is peg in and value is nonzero
-            if v["address"] == peg_in && v["value"].as_f64().unwrap() > 0.0 {
-                let asm = v["scriptPubKey"]["asm"].as_str().unwrap();
-                if asm.len() >= 25 {
-                    // pull out OP_RETURN and ensure it's followed by OP_PUSHBYTES_20
-                    if &asm[0..9] == "OP_RETURN" && &asm[10..25] == "OP_PUSHBYTES_20" {
-                        // create address and ensure it's an eth address
-                        let raw_op = &asm[26..66];
-                        let eth_address = format!("0x{}", raw_op);
-                        if is_valid_ethereum_address(eth_address.as_str()) {
-                            let btc_value = v["value"].as_f64().unwrap();
-                            // convert BTC -> SAT
-                            let value = format!("{}", btc_value * 100_000_000.0);
-                            peg_txs.push(PegTx {
-                                value,
-                                eth_address,
-                            });
+            if let Some(address) = v["scriptPubKey"]["address"].as_str() {
+                // esnure address is correct and positive value
+                if address == peg_in && v["value"].as_f64().unwrap() > 0.0 {
+                    let asm = v["scriptPubKey"]["asm"].as_str().unwrap();
+                    // make sure valid length
+                    if asm.len() >= 66 {
+                        // pull out OP_RETURN and ensure it's followed by OP_PUSHBYTES_20
+                        if &asm[0..9] == "OP_RETURN" && &asm[10..25] == "OP_PUSHBYTES_20" {
+                            // create address and ensure it's an eth address
+                            let raw_op = &asm[26..66];
+                            let eth_address = format!("0x{}", raw_op);
+                            // try unwrapping as Address
+                            if is_valid_eth_address(eth_address.as_str()) {
+                                if let Ok(eth_address) = Address::from_str(eth_address.as_str()) {
+                                    let btc_value = v["value"].as_f64().unwrap();
+                                    // convert BTC -> SAT
+                                    let value = format!("{}", btc_value * 100_000_000.0);
+                                    peg_txs.push(PegTx { value, eth_address });
+                                }
+                            }
                         }
                     }
                 }
@@ -93,38 +99,23 @@ pub async fn parse_transactions(
     Ok(peg_txs)
 }
 
-fn is_valid_ethereum_address(address: &str) -> bool {
-    let re = regex::Regex::new("^0x[0-9a-fA-F]{40}$").unwrap();
-
-    if !re.is_match(address) {
-        // Check if it has the correct length and starts with 0x
-        return false;
+fn is_valid_eth_address(address: &str) -> bool {
+    if let Ok(parsed_address) = Address::from_str(address) {
+        let checksummed_address = checksum(&format!("{:?}", parsed_address));
+        return checksummed_address == address;
     }
-
-    // If it has upper and lower case characters, it must pass checksum verification
-    let re_upper = regex::Regex::new("^[0-9a-fA-F]{40}$").unwrap();
-    let re_lower = regex::Regex::new("^[0-9A-F]{40}$").unwrap();
-    if re_upper.is_match(address) || re_lower.is_match(address) {
-        return true;
-    }
-
-    // Failed checksum verification
     false
 }
 
-/*
- *     function pegInQSAT(address ethAddress, uint256 amount) public onlyOracleOrSharesPool {
- *         require(qsat.balanceOf(address(this)) >= amount,
- *             "Bridge contract has insufficient QSAT");
- * 
- *         qsat.transfer(ethAddress, amount);
- * 
- *         emit PegInQSATEvent(ethAddress, amount);
- *     }
- */
-
-// (TODO) make function to call pegin functions in SC
-pub async fn _peg_in(tx: &PegTx) {
-    let amount = tx.value.as_str();
-    let address = tx.eth_address.as_str();
+pub async fn peg_in_sc(
+    tx: &PegTx,
+    qsat_bridge: &QSATBridge<SignerMiddleware<Provider<RetryClient<Http>>, LocalWallet>>,
+) {
+    // convert PegTx values to Solidity types
+    let amount: U256 = U256::from(tx.value.as_str().parse::<u64>().unwrap());
+    let eth_address: Address = tx.eth_address;
+    let sc_tx = qsat_bridge.peg_in_qsat(eth_address, amount);
+    let sc_tx = sc_tx.send().await.unwrap();
+    let receipt = sc_tx.await.unwrap();
+    println!("Peg out: {:?}", receipt);
 }
