@@ -4,7 +4,7 @@ Installing contract dependencies
 ```shell
 cd contracts
 forge install https://github.com/OpenZeppelin/openzeppelin-foundry-upgrades --no-git
-forge install https://github.com/OpenZeppelin/openzeppelin-contracts-upgradable --no-git
+forge install https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable --no-git
 forge install https://github.com/OpenZeppelin/openzeppelin-contracts --no-git
 ```
 
