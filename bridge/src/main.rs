@@ -1,5 +1,5 @@
 use ethers::prelude::*;
-use quarry_sdk::bindings::qsat_bridge::{PegOutQSATEventFilter, QSATBridge};
+use quarry_sdk::bindings::qsat_bridge::QSATBridge;
 use quarry_sdk::{Deployment, Env};
 use serde_json::Value;
 use std::sync::Arc;
@@ -14,8 +14,6 @@ async fn main() {
     let client = reqwest::Client::new();
     // test net
     let peg_in_addr = "tb1qsgx55dp6gn53tsmyjjv4c2ye403hgxynxs0dnm";
-    let endpoint =
-        "https://billowing-fittest-feather.btc-testnet.quiknode.pro/4613ae0ad4238d1261f99cc2cd8baa48f6b96d83/";
     let deployment = Deployment::get(Env::Local);
     let provider = Provider::new_client(&deployment.eth_rpc_url.clone(), 15, 500).unwrap();
     let chain_id = provider.get_chainid().await.unwrap();
