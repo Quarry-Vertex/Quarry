@@ -5,8 +5,8 @@ use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bridge::peg_in;
 mod btc;
-mod peg_in;
 mod peg_out;
 
 #[tokio::main]
@@ -38,14 +38,13 @@ async fn main() {
         let tx_json: Vec<Value> = peg_in::get_peg_transactions(&client, peg_in_addr)
             .await
             .unwrap();
-        // println!("{:?}", tx_json);
         let tx_id = tx_json[0]["txid"].as_str().unwrap().to_string();
         // call this val tx_unsent
         let peg_in_txs = peg_in::parse_transactions(
-            &client,
+            // &client,
             latest_tx_id.as_str(),
             &tx_json.clone(),
-            endpoint,
+            // endpoint,
             peg_in_addr,
         )
         .await;
