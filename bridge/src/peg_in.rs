@@ -9,7 +9,7 @@ pub async fn get_peg_transactions(
     client: &reqwest::Client,
     address: &str,
 ) -> Result<Vec<Value>, reqwest::Error> {
-    let endpoint = format!("https://blockstream.info/api/address/{}/txs", address);
+    let endpoint = format!("https://blockstream.info/testnet/api/address/{}/txs", address);
 
     let tx_res: Value = client.get(&endpoint).send().await?.json().await?;
 
@@ -50,6 +50,8 @@ pub async fn parse_transactions(
         if tx_id == latest_tx {
             break;
         }
+        // let endpoint = format!("https://blockstream.info/testnet/api/tx/{}", tx_id);
+        // let mut tx_res: Value = client.get(&endpoint).send().await?.json().await?;
         let mut tx_res: Value = client
             .post(endpoint)
             .json(&json!({
@@ -70,8 +72,10 @@ pub async fn parse_transactions(
         for v in tx_res["result"]["vout"].as_array().unwrap() {
             // ensure address is peg in and value is nonzero
             if let Some(address) = v["scriptPubKey"]["address"].as_str() {
+                // convert value to a f64 representation of sats
+                let value_f64 = v["value"].as_f64().unwrap() * 100_000_000.0;
                 // esnure address is correct and positive value
-                if address == peg_in && v["value"].as_f64().unwrap() > 0.0 {
+                if address == peg_in &&  value_f64 >= 0.0 {
                     let asm = v["scriptPubKey"]["asm"].as_str().unwrap();
                     // make sure valid length
                     if asm.len() >= 66 {
@@ -83,9 +87,8 @@ pub async fn parse_transactions(
                             // try unwrapping as Address
                             if is_valid_eth_address(eth_address.as_str()) {
                                 if let Ok(eth_address) = Address::from_str(eth_address.as_str()) {
-                                    let btc_value = v["value"].as_f64().unwrap();
-                                    // convert BTC -> SAT
-                                    let value = format!("{}", btc_value * 100_000_000.0);
+                                    // populate transaction vector
+                                    let value = format!("{}", value_f64);
                                     peg_txs.push(PegTx { value, eth_address });
                                 }
                             }

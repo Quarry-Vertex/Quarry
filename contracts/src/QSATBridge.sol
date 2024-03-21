@@ -31,12 +31,14 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
         uint256 amount
     );
 
-    struct BurnRequest{
+    bytes32 [] public processedTransaction;
+
+    struct PegOutRequest{
         bytes32 btcAddress;
         uint256 amount;
     }
 
-    BurnRequest[] public burnRequests;
+    PegOutRequest[] public pegOutRequests;
 
     function setQSATContract(address _qsatAddress) public onlyOwner {
         qsat = QSAT(_qsatAddress);
@@ -73,6 +75,17 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
             "Token transfer failed. Please ensure QSAT to be pegged out has been approved");
 
         // add the burn request to the Array
-        burnRequests.push(BurnRequest(btcAddress, amount));
+        pegOutRequests.push(PegOutRequest(btcAddress, amount));
+    }
+
+    // Function to get the total number of burn requests
+    function getTotalBurnRequests() external view returns (uint256) {
+        return pegOutRequests.length;
+    }
+
+    // Function to get a specific burn request details by index
+    function getBurnRequest(uint256 _index) external view returns (PegOutRequest memory) {
+        require(_index < pegOutRequests.length, "Burn request does not exist.");
+        return pegOutRequests[_index];
     }
 }
