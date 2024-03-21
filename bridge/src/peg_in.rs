@@ -1,7 +1,7 @@
 use eth_checksum::checksum;
 use ethers::prelude::*;
 use quarry_sdk::bindings::qsat_bridge::QSATBridge;
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::str::FromStr;
 
 // curl -s "https://blockstream.info/testnet/api/address/tb1qsgx55dp6gn53tsmyjjv4c2ye403hgxynxs0dnm/txs"
@@ -29,13 +29,6 @@ pub struct PegTx {
     pub value: String,
     pub eth_address: H160,
 }
-
-/*
-curl https://dark-icy-putty.btc.quiknode.pro/c312ce60f2c274142fe6c7c08cb3999c3ae354eb/ \
-    -X POST \
-    -H "Content-Type: application/json" \
-    --data '{"method": "getrawtransaction", "params": ["c7cfd4ad3662e062c5f70c933e5bd435bdd13e2271caef68b5c41ac981d12025", 1]}'
-*/
 
 pub async fn parse_transactions(
     latest_tx: &str,
@@ -81,6 +74,27 @@ pub async fn parse_transactions(
     }
 
     Ok(peg_txs)
+}
+
+fn is_valid_eth_address(address: &str) -> bool {
+    if let Ok(parsed_address) = Address::from_str(address) {
+        let checksummed_address = checksum(&format!("{:?}", parsed_address));
+        return checksummed_address == address;
+    }
+    false
+}
+
+pub async fn peg_in_sc(
+    tx: &PegTx,
+    qsat_bridge: &QSATBridge<SignerMiddleware<Provider<RetryClient<Http>>, LocalWallet>>,
+) {
+    // convert PegTx values to Solidity types
+    let amount: U256 = U256::from(tx.value.as_str().parse::<u64>().unwrap());
+    let eth_address: Address = tx.eth_address;
+    let sc_tx = qsat_bridge.peg_in_qsat(eth_address, amount);
+    let sc_tx = sc_tx.send().await.unwrap();
+    let receipt = sc_tx.await.unwrap();
+    println!("Peg out: {:?}", receipt);
 }
 
 // pub async fn parse_transactions(
@@ -148,24 +162,3 @@ pub async fn parse_transactions(
 
     // Ok(peg_txs)
 // }
-
-fn is_valid_eth_address(address: &str) -> bool {
-    if let Ok(parsed_address) = Address::from_str(address) {
-        let checksummed_address = checksum(&format!("{:?}", parsed_address));
-        return checksummed_address == address;
-    }
-    false
-}
-
-pub async fn peg_in_sc(
-    tx: &PegTx,
-    qsat_bridge: &QSATBridge<SignerMiddleware<Provider<RetryClient<Http>>, LocalWallet>>,
-) {
-    // convert PegTx values to Solidity types
-    let amount: U256 = U256::from(tx.value.as_str().parse::<u64>().unwrap());
-    let eth_address: Address = tx.eth_address;
-    let sc_tx = qsat_bridge.peg_in_qsat(eth_address, amount);
-    let sc_tx = sc_tx.send().await.unwrap();
-    let receipt = sc_tx.await.unwrap();
-    println!("Peg out: {:?}", receipt);
-}
