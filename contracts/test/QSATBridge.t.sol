@@ -43,7 +43,7 @@ contract QSATBridgeTest is Test {
         qsatBridge.setQSATContract(proxyQSAT);
     }
 
-    function test_bridgeInitialSupply() public {
+    function test_bridgeInitialSupply() public view {
         assertEq(qsat.balanceOf(proxyQSATBridge), 21000000 * 100000000, "Expected 21000000 * 100000000 qsat to be initial supply");
     }
 
@@ -66,9 +66,33 @@ contract QSATBridgeTest is Test {
         qsat.approve(proxyQSATBridge, 5000);
 
         vm.expectEmit();
-        emit QSATBridge.PegOutQSATEvent(testBTCAddress, 5000);
+        emit QSATBridge.PegOutQSATEvent(testBTCAddress, 1000);
 
+        // test emitting events and peg out request array
         vm.prank(testAddress);
-        qsatBridge.pegOutQSAT(testBTCAddress, 5000);
+        qsatBridge.pegOutQSAT(testBTCAddress, 1000);    // 0
+        vm.prank(testAddress);
+        qsatBridge.pegOutQSAT(testBTCAddress, 100);     // 1
+        vm.prank(testAddress);
+        qsatBridge.pegOutQSAT(testBTCAddress, 300);     // 2
+        vm.prank(testAddress);
+        qsatBridge.pegOutQSAT(testBTCAddress, 400);     // 3
+
+        // total peg out requests
+        assertEq(qsatBridge.getTotalPegOutRequests(), 4);
+
+        // 0
+        QSATBridge.PegOutRequest memory req = qsatBridge.getPegOutRequest(0);
+        assert(req.btcAddress == testBTCAddress);
+        assert(req.amount == 1000);
+        // 1
+        req = qsatBridge.getPegOutRequest(1);
+        assert(req.amount == 100);
+        // 2
+        req = qsatBridge.getPegOutRequest(2);
+        assert(req.amount == 300);
+        // 3
+        req = qsatBridge.getPegOutRequest(3);
+        assert(req.amount == 400);
     }
 }
