@@ -51,8 +51,8 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
         sharesPoolAddress = _sharesPoolAddress;
     }
 
-	// Oracle monitors peg in address, if there is a transction with 6+ confirmations with an OP_RETURN == eth transaction then call this method
-	// SharesPool calls this method to transfer QSAT
+    // Oracle monitors peg in address, if there is a transction with 6+ confirmations with an OP_RETURN == eth transaction then call this method
+    // SharesPool calls this method to transfer QSAT
     function pegInQSAT(address ethAddress, uint256 amount) public onlyOracleOrSharesPool {
         require(qsat.balanceOf(address(this)) >= amount,
             "Bridge contract has insufficient QSAT");
@@ -76,15 +76,16 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
 
         // add the burn request to the Array
         pegOutRequests.push(PegOutRequest(btcAddress, amount));
+        emit PegOutQSATEvent(btcAddress, amount);
     }
 
     // Function to get the total number of burn requests
-    function getTotalBurnRequests() external view returns (uint256) {
+    function getTotalPegOutRequests() external view returns (uint256) {
         return pegOutRequests.length;
     }
 
     // Function to get a specific burn request details by index
-    function getBurnRequest(uint256 _index) external view returns (PegOutRequest memory) {
+    function getPegOutRequest(uint256 _index) external view returns (PegOutRequest memory) {
         require(_index < pegOutRequests.length, "Burn request does not exist.");
         return pegOutRequests[_index];
     }
