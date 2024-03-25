@@ -31,6 +31,7 @@ contract QSATBridge is Initializable, OwnableUpgradeable {
         uint256 amount
     );
 
+    // processed Peg In Transactions
     bytes32 [] public processedTransaction;
 
     struct PegOutRequest{
