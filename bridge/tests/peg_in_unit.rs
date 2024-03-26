@@ -18,7 +18,8 @@ mod tests {
             .await
             .unwrap();
 
-        println!("{:?}", tx_json);
+        // uncomment to show whole json response
+        // println!("{:?}", tx_json);
         // correct number of transactions
         assert!(tx_json.len() == tx_count);
 
