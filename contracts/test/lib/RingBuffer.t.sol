@@ -14,24 +14,18 @@ contract SharesRingBufferTest is Test {
     uint256 testHash = 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7;
 
     Pool public pool;
-    address public proxy;
-    address public proxyShare;
+    Share public share;
 
-    function setUp() public {}
+    function setUp() public {
+        pool = new Pool();
+        share = new Share();
+    }
 
     function test_emptyBuffer() public {
-        // initialize with size 0
-        uint256 size = 0;
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, size))
-        );
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
-        );
-        pool = Pool(proxy);
-        pool.setShareContract(proxyShare);
+        pool.initialize(oracleAddress, pegInAddress, 0);
+        share.initialize("QuarryShares", "QShare", address(pool));
+
+        pool.setShareContract(address(share));
         // 0 shares
         assertTrue(pool.numSharesInRingBuffer() == 0, "Ring buffer size is 0");
         // buffer is full
@@ -41,17 +35,10 @@ contract SharesRingBufferTest is Test {
     }
 
     function test_populatedBuffer() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
-        );
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
-        );
-        pool = Pool(proxy);
-        pool.setShareContract(proxyShare);
+        pool.initialize(oracleAddress, pegInAddress, 10);
+        share.initialize("QuarryShares", "QShare", address(pool));
 
+        pool.setShareContract(address(share));
         // no pushed shares
         assertTrue(pool.numSharesInRingBuffer() == 0, "Ring buffer size starts at 0");
         assertTrue(pool.ringBufferIsEmpty(), "Ring buffer is empty");
@@ -82,16 +69,10 @@ contract SharesRingBufferTest is Test {
     }
 
     function test_overflow() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
-        );
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
-        );
-        pool = Pool(proxy);
-        pool.setShareContract(proxyShare);
+        pool.initialize(oracleAddress, pegInAddress, 10);
+        share.initialize("QuarryShares", "QShare", address(pool));
+
+        pool.setShareContract(address(share));
         // no pushed shares
         assertTrue(pool.numSharesInRingBuffer() == 0, "Ring buffer size starts at 0");
         assertTrue(pool.ringBufferIsEmpty(), "Ring buffer is empty");
@@ -123,17 +104,10 @@ contract SharesRingBufferTest is Test {
     }
 
     function test_popFromEmpty() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
-        );
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
-        );
-        pool = Pool(proxy);
-        pool.setShareContract(proxyShare);
+        pool.initialize(oracleAddress, pegInAddress, 10);
+        share.initialize("QuarryShares", "QShare", address(pool));
 
+        pool.setShareContract(address(share));
         // element to be added (1-10)
         uint16 i = 1;
         // add 10 shares
@@ -153,17 +127,10 @@ contract SharesRingBufferTest is Test {
     }
 
     function test_partiallyPopulatedBuffer() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
-        );
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
-        );
-        pool = Pool(proxy);
-        pool.setShareContract(proxyShare);
+        pool.initialize(oracleAddress, pegInAddress, 10);
+        share.initialize("QuarryShares", "QShare", address(pool));
 
+        pool.setShareContract(address(share));
         // no pushed shares
         assertTrue(pool.numSharesInRingBuffer() == 0, "Ring buffer size starts at 0");
         assertTrue(pool.ringBufferIsEmpty(), "Ring buffer is empty");
