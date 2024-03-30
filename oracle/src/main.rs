@@ -3,8 +3,11 @@
 use bitcoin::base58;
 use bitcoin::bech32;
 use ethers::prelude::*;
+use log;
 use quarry_sdk::bindings::pool::{BitcoinBlock, BlockHeader, Pool};
 use quarry_sdk::{Deployment, Env};
+use simplelog::*;
+use std::fs::File;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -12,6 +15,10 @@ mod quicknode_funcs;
 
 #[tokio::main]
 async fn main() {
+    // Setup logging
+    let log_file = File::create("oracle.log").unwrap();
+    WriteLogger::init(LevelFilter::Info, Config::default(), log_file).unwrap();
+
     // Smart Contract Setup
     let deployment = Deployment::get(Env::Local);
     let provider = Provider::new_client(&deployment.eth_rpc_url.clone(), 15, 500).unwrap();
@@ -95,7 +102,7 @@ async fn main() {
 
         // add new address to list
         // if !prev_addresses.contains(&address_str.to_string()) {
-            // prev_addresses.push(address_str.to_string());
+        // prev_addresses.push(address_str.to_string());
         // }
         // Decode the address based on it's encoding format
         // only two choices so expect and error if that isn't the case
@@ -143,19 +150,19 @@ async fn main() {
             block_reward,
         };
 
-        println!("Best Hash: {:?}", best_hash);
         // new block found
         if previous_merkle != merkle_root_hash {
-            println!("Best Block: {:?}", best_block);
+            log::info!("Best Hash: {:?}", best_hash);
+            log::info!("Best Block: {:?}", best_block);
             let tx = pool.set_chain_tip(chain_tip);
             let tx = match tx.send().await {
                 Ok(v) => v,
                 Err(e) => {
                     panic!("Failed to send transaction to pool\n{:?}", e);
-                },
+                }
             };
             let receipt = tx.await.unwrap();
-            println!("Set chain tip: {:?}", receipt);
+            log::info!("Set chain tip: {:?}", receipt);
             previous_merkle = merkle_root_hash;
         }
 
