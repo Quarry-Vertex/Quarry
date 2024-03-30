@@ -16,3 +16,4 @@ tokio = { version = "1.36.0", features = ["full"] }
 eyre = "0.6.12"
 base58 = "0.2.0"
 regex = "1.10.3"
+bitcoin = "0.31.1"

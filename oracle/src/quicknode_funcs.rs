@@ -47,10 +47,27 @@ pub async fn get_best_block(
         .json()
         .await?;
 
-    let address = format!("0x{}", tx_res["result"]["vout"][0]["scriptPubKey"]["address"].as_str().unwrap());
-    let btc_value = tx_res["result"]["vout"][0]["value"].as_f64().unwrap();
+    let vout_array = tx_res["result"]["vout"].as_array().unwrap();
+
+    let mut address = String::new();
+    let mut btc_value: Option<f64> = None;
+
+    // some outputs are empty and will panic the program
+    // find the first transaction output with an address
+    for vout_entry in vout_array {
+        if let Some(addr) = vout_entry["scriptPubKey"]["address"].as_str() {
+            address = format!("0x{}", addr);
+            btc_value = Some(vout_entry["value"].as_f64().unwrap());
+            println!("{:?}", vout_entry["value"].as_f64().unwrap());
+            break; // Exit the loop once the first address is found
+        }
+    }
+    if btc_value == None {
+        panic!("no value set");
+    }
     // convert BTC -> SAT
-    let value = format!("{}", btc_value * 100_000_000.0);
+    let value = format!("{}", (btc_value.unwrap() * (100_000_000 as f64)) as u64);
+    println!("value {:?}", value);
 
     // return serialized data for SC
     Ok(json!({
