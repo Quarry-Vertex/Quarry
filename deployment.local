@@ -8,5 +8,5 @@
   "peg_in_address": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "ring_buffer_size": 10000,
   "eth_rpc_url": "http://localhost:8545",
-  "btc_rpc_url": "https://dark-icy-putty.btc.quiknode.pro/c312ce60f2c274142fe6c7c08cb3999c3ae354eb/"
+  "btc_rpc_url": "https://billowing-fittest-feather.btc-testnet.quiknode.pro/4613ae0ad4238d1261f99cc2cd8baa48f6b96d83/"
 }
