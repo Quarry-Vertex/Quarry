@@ -1,6 +1,9 @@
 use serde_json::{json, Value};
 
-pub async fn get_best_hash(client: &reqwest::Client, endpoint: &str) -> Result<String, reqwest::Error> {
+pub async fn get_best_hash(
+    client: &reqwest::Client,
+    endpoint: &str,
+) -> Result<String, reqwest::Error> {
     let res: Value = client
         .post(endpoint)
         .json(&json!({ "method": "getbestblockhash" }))
@@ -29,7 +32,10 @@ pub async fn get_best_block(
         .json()
         .await?;
 
-    let prev_hash = format!("0x{}", block_res["result"]["previousblockhash"].as_str().unwrap());
+    let prev_hash = format!(
+        "0x{}",
+        block_res["result"]["previousblockhash"].as_str().unwrap()
+    );
     let merkle_root = format!("0x{}", block_res["result"]["merkleroot"].as_str().unwrap());
     let bits = format!("0x{}", block_res["result"]["bits"].as_str().unwrap());
     // the coinbase transaction is the first listed transaction
@@ -58,7 +64,6 @@ pub async fn get_best_block(
         if let Some(addr) = vout_entry["scriptPubKey"]["address"].as_str() {
             address = format!("0x{}", addr);
             btc_value = Some(vout_entry["value"].as_f64().unwrap());
-            println!("{:?}", vout_entry["value"].as_f64().unwrap());
             break; // Exit the loop once the first address is found
         }
     }
@@ -67,7 +72,6 @@ pub async fn get_best_block(
     }
     // convert BTC -> SAT
     let value = format!("{}", (btc_value.unwrap() * (100_000_000 as f64)) as u64);
-    println!("value {:?}", value);
 
     // return serialized data for SC
     Ok(json!({
