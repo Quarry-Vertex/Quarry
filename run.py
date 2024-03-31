@@ -1,17 +1,17 @@
 import click
 import asyncio
+import subprocess
 import json
 import os
 
 PIPE = asyncio.subprocess.PIPE
 
 QUARRY = os.path.dirname(os.path.abspath(__file__))
-SERVICES = [
-    "oracle"
-]
+SERVICES = ["oracle"]
+
 
 async def wait_process_running(
-        process: str, success_log_str: str, log_lines=15
+    process: str, success_log_str: str, log_lines=15
 ) -> None:
     while True:
         proc = await asyncio.create_subprocess_exec(
@@ -28,6 +28,7 @@ async def wait_process_running(
             break
         else:
             await asyncio.sleep(0.1)
+
 
 async def pm2_delete_process(process: str):
     proc = await asyncio.create_subprocess_exec(
@@ -57,6 +58,7 @@ async def check_process_running(process_name: str) -> bool:
         return True
     return False
 
+
 async def run_local_evm() -> None:
     is_running = await check_process_running("local-evm")
     if is_running:
@@ -84,6 +86,7 @@ async def run_local_evm() -> None:
     await wait_process_running("local-evm", started_log)
     print(f"local-evm running")
 
+
 async def deploy_contracts():
     proc = await asyncio.create_subprocess_exec(
         "cargo",
@@ -92,11 +95,51 @@ async def deploy_contracts():
     )
     await proc.wait()
 
-async def run(restart_service):
+
+async def run_oracle():
+    is_running = await check_process_running("oracle-service")
+    if is_running:
+        print("oracle-service already running")
+        return
+    oracle_path = os.path.join(QUARRY, "oracle")
+    await asyncio.create_subprocess_exec(
+        "pm2",
+        "start",
+        "cargo",
+        "--name",
+        "oracle-service",
+        "--",
+        "run",
+        cwd=oracle_path,
+    )
+
+    print(f"starting oracle-service...")
+    print(f"oracle-service running")
+
+
+async def run(restart_service, list_services, kill_services):
+    if kill_services:
+        print("kill running services...")
+        subprocess.run(["pm2", "kill"])
+        return
+    if list_services:
+        print("Listing running services...")
+        subprocess.run(["pm2", "list"])
+        return
     if restart_service:
-        raise NotImplementedError
+        print(f"Restarting {restart_service} service...")
+        await pm2_delete_process(restart_service)
+        if restart_service == "local-evm":
+            await run_local_evm()
+        elif restart_service == "oracle-service":
+            await run_oracle()
+        else:
+            print(f"Unknown service: {restart_service}")
+        return
     await run_local_evm()
     await deploy_contracts()
+    await run_oracle()
+
 
 @click.command()
 @click.option(
@@ -105,8 +148,24 @@ async def run(restart_service):
     default=None,
     help="restarts specified service e.g: engine,agent",
 )
-def main(restart_service):
-    asyncio.get_event_loop().run_until_complete(run(restart_service))
+@click.option(
+    "--list",
+    "-l",
+    "list_services",
+    is_flag=True,
+    help="Lists running services.",
+)
+@click.option(
+    "--kill",
+    "-k",
+    "kill_services",
+    is_flag=True,
+    help="Kill running services.",
+)
+def main(restart_service, list_services, kill_services):
+    asyncio.get_event_loop().run_until_complete(
+        run(restart_service, list_services, kill_services)
+    )
 
 
 if __name__ == "__main__":
