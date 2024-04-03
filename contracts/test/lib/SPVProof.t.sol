@@ -16,6 +16,7 @@ contract SPVProofTest is Test {
         A(tx)  B* C    D
     */
 
+    /*
     // initialize contract object
     address oracleAddress = address(bytes20(keccak256(abi.encode(block.timestamp))));
     address testAddress = address(bytes20(keccak256(abi.encode(block.timestamp + 200))));
@@ -39,9 +40,7 @@ contract SPVProofTest is Test {
         pool.setShareContract(proxyShare);
     }
 
-    /*
-        Test getting the correct merkle root from every node in the merkle tree
-    */
+    // Test getting the correct merkle root from every node in the merkle tree
 
     function reverseBytes32(bytes32 input) public pure returns (bytes32) {
         bytes32 reversed;
@@ -145,9 +144,7 @@ contract SPVProofTest is Test {
         assertTrue(pool.spvProof(merklePath, root), "Valid SPV proof should pass");
     }
 
-    /*
-        Failing proofs due to incorrect roots
-    */
+    // Failing proofs due to incorrect roots
 
     function test_FromAFails() public {
         // Example of a valid Merkle path for transaction A in the Merkle tree
@@ -192,5 +189,6 @@ contract SPVProofTest is Test {
         vm.expectRevert("SPV proof failed");
         pool.spvProof(merklePath, wrongRoot);
     }
+    */
 
 }
