@@ -10,6 +10,20 @@ QUARRY = os.path.dirname(os.path.abspath(__file__))
 SERVICES = ["oracle"]
 
 
+async def start_pm2_service(name, command, *args, cwd=None):
+    proc = await asyncio.create_subprocess_exec(
+        "pm2",
+        "start",
+        command,
+        "--name",
+        name,
+        "--",
+        *args,
+        cwd=cwd,
+    )
+    return proc
+
+
 async def wait_process_running(
     process: str, success_log_str: str, log_lines=15
 ) -> None:
@@ -59,7 +73,37 @@ async def check_process_running(process_name: str) -> bool:
     return False
 
 
+async def display_pm2_logs(service_name):
+    proc = await asyncio.create_subprocess_exec(
+        "pm2", "logs", service_name, stdout=PIPE, stderr=PIPE
+    )
+
+    # Async read stdout and stderr
+    async def read_stream(stream, callback):
+        while True:
+            line = await stream.readline()
+            if line:
+                callback(line.decode().strip())
+            else:
+                break
+
+    # Define a simple print callback
+    def print_line(line):
+        print(line)
+
+    # Await both stdout and stderr
+    await asyncio.gather(
+        read_stream(proc.stdout, print_line), read_stream(proc.stderr, print_line)
+    )
+
+    await proc.wait()
+
+
 async def run_local_evm() -> None:
+    """
+    Start the anvil local node for locally deploying smart contracts. The evm
+    is deployed on port 8545.
+    """
     is_running = await check_process_running("local-evm")
     if is_running:
         print("local-evm running")
@@ -97,27 +141,126 @@ async def deploy_contracts():
 
 
 async def run_oracle():
+    """
+    Run the rust oracle which sets chain tips on the smart contract
+    the cwd is the oracle directory and logs are stored in 'oracle/oracle.log'
+    """
     is_running = await check_process_running("oracle-service")
     if is_running:
         print("oracle-service already running")
         return
+
     oracle_path = os.path.join(QUARRY, "oracle")
-    await asyncio.create_subprocess_exec(
-        "pm2",
-        "start",
-        "cargo",
-        "--name",
+
+    proc = await start_pm2_service(
         "oracle-service",
-        "--",
+        "cargo",
         "run",
         cwd=oracle_path,
     )
+    await proc.wait()
+
+    started_log = "Running "
 
     print(f"starting oracle-service...")
+    await wait_process_running("oracle-service", started_log)
     print(f"oracle-service running")
 
 
-async def run(restart_service, list_services, kill_services):
+async def run_stratum():
+    """
+    Run the SV2 Pool
+    cd roles/pool/config-examples
+    cargo run -- -c pool-config-local-tp-example.toml
+
+    Run the Job Declarator Server (JDS)
+    cd roles/jd-server/config-examples
+    cargo run -- -c jds-config-local-example.toml
+
+    Run Job Declarator Client (JDC)
+    cd roles/jd-client/config-examples/
+    cargo run -- -c jdc-config-local-example.toml
+
+    Run Translator Proxy
+    cd roles/translator/config-examples/
+    cargo run -- -c tproxy-config-local-jdc-example.toml
+    """
+    pool_running = await check_process_running("sv2pool-service")
+    job_server_running = await check_process_running("sv2jobserver-service")
+    job_client_running = await check_process_running("sv2jobclient-service")
+    proxy_running = await check_process_running("sv2proxy-service")
+    if pool_running and job_server_running and job_client_running and proxy_running:
+        print("stratum services already running")
+        return
+    SV2_BASE = QUARRY + "/../stratum/"
+    pool_proc = await start_pm2_service(
+        "sv2pool-service",
+        "cargo",
+        "run",
+        "--",
+        "-c",
+        "pool-config-local-tp-example.toml",
+        cwd=SV2_BASE + "roles/pool/config-examples",
+    )
+    await pool_proc.wait()
+
+    job_server_proc = await start_pm2_service(
+        "sv2jobserver-service",
+        "cargo",
+        "run",
+        "--",
+        "-c",
+        "jds-config-local-example.toml",
+        cwd=SV2_BASE + "roles/jd-server/config-examples",
+    )
+    await job_server_proc.wait()
+
+    job_client_proc = await start_pm2_service(
+        "sv2jobclient-service",
+        "cargo",
+        "run",
+        "--",
+        "-c",
+        "jdc-config-local-example.toml",
+        cwd=SV2_BASE + "roles/jd-client/config-examples/",
+    )
+    await job_client_proc.wait()
+
+    proxy_proc = await start_pm2_service(
+        "sv2proxy-service",
+        "cargo",
+        "run",
+        "--",
+        "-c",
+        "tproxy-config-local-jdc-example.toml",
+        cwd=SV2_BASE + "roles/translator/config-examples/",
+    )
+    await proxy_proc.wait()
+
+    started_log = "Running "
+
+    print("starting sv2pool-service...")
+    await wait_process_running("sv2pool-service", started_log)
+    print("sv2pool-service running")
+
+    print("starting sv2jobserver-service...")
+    await wait_process_running("sv2jobserver-service", started_log)
+    print("sv2jobserver-service running")
+
+    print("starting sv2jobclient-service...")
+    await wait_process_running("sv2jobclient-service", started_log)
+    print("sv2jobclient-service running")
+
+    print("starting sv2proxy-service...")
+    await wait_process_running("sv2proxy-service", started_log)
+    print("sv2proxy-service running")
+
+
+async def run(restart_service, list_services, kill_services, log_service):
+    if log_service:
+        print(f"Logging {log_service}")
+        await display_pm2_logs(log_service)
+        return
     if kill_services:
         print("kill running services...")
         subprocess.run(["pm2", "kill"])
@@ -139,6 +282,7 @@ async def run(restart_service, list_services, kill_services):
     await run_local_evm()
     await deploy_contracts()
     await run_oracle()
+    await run_stratum()
 
 
 @click.command()
@@ -162,9 +306,15 @@ async def run(restart_service, list_services, kill_services):
     is_flag=True,
     help="Kill running services.",
 )
-def main(restart_service, list_services, kill_services):
-    asyncio.get_event_loop().run_until_complete(
-        run(restart_service, list_services, kill_services)
+@click.option(
+    '--log',
+    'log_service',
+    default=None,
+    help='Name of the PM2 service whose logs you want to display.',
+)
+def main(restart_service, list_services, kill_services, log_service):
+    asyncio.run(
+        run(restart_service, list_services, kill_services, log_service)
     )
 
 
