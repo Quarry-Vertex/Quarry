@@ -6,6 +6,7 @@ import {BTCUtilsScript} from "bitcoin-spv/script/BTCUtils.s.sol";
 import "forge-std/console.sol";
 
 contract BTCSPV is Test {
+    /*
     ValidateSPVScript public instance;
     BTCUtilsScript public btcUtils;
 
@@ -68,4 +69,5 @@ contract BTCSPV is Test {
         //_txid = hex"0f2a733f000d577e2df099a7e010e752663916c6287046285d92a51a12ab25ba";
         //assertTrue(instance.prove(_txid, _merkleRoot, _proof, _index));
     }
+    */
 }

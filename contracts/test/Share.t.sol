@@ -14,32 +14,26 @@ contract ShareTest is Test {
     address testAddress2 = address(bytes20(keccak256(abi.encode(block.timestamp + 100))));
 
     Share public share;
-    address proxy;
-    address proxyShare;
+    Pool public pool;
+    address poolAddress;
 
     function setUp() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
-        );
-
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(Share.initialize, ("QuarryShares", "QShare", proxy))
-        );
-
-        share = Share(proxyShare);
+        pool = new Pool();
+        pool.initialize(oracleAddress, pegInAddress, 500);
+        poolAddress = address(pool);
+        share = new Share();
+        share.initialize("QuarryShares", "QShare", address(pool));
     }
 
     function test_mintShare() public {
-        vm.startPrank(proxy);
+        vm.startPrank(poolAddress);
         share.mint(testAddress, 1);
         assertTrue(share.ownerOf(1) == testAddress, "Expected testAddress to be owner of tokenId 1");
         vm.stopPrank();
     }
 
     function test_burn() public {
-        vm.startPrank(proxy);
+        vm.startPrank(poolAddress);
         uint256 tokenId = share.mint(testAddress, 2);
         assertTrue(share.ownerOf(tokenId) == testAddress, "Expected testAddress to be owner of tokenId 2");
 
@@ -49,7 +43,7 @@ contract ShareTest is Test {
     }
 
     function test_transferShare() public {
-        vm.startPrank(proxy);
+        vm.startPrank(poolAddress);
         uint256 tokenId = share.mint(testAddress, 3);
         assertTrue(share.ownerOf(tokenId) == testAddress, "Expected testAddress to be owner of tokenId 3");
         vm.stopPrank();
@@ -64,7 +58,7 @@ contract ShareTest is Test {
     }
 
     function test_burnDoesNotExist() public {
-        vm.startPrank(proxy);
+        vm.startPrank(poolAddress);
         uint256 tokenId = share.mint(testAddress, 4);
         assertTrue(share.ownerOf(tokenId) == testAddress, "Expected testAddress to be owner of tokenId 4");
 

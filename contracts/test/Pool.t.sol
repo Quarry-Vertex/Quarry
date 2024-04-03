@@ -19,11 +19,6 @@ contract PoolTest is Test {
     QSAT public qsat;
     QSATBridge public qsatBridge;
 
-    address public proxy;
-    address public proxyShare;
-    address public proxyQSATBridge;
-    address public proxyQSAT;
-
     // Helper methods
     function createTestBlock(
         bytes32 blockHash,
@@ -61,33 +56,21 @@ contract PoolTest is Test {
     }
 
     function setUp() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 500))
-        );
+        pool = new Pool();
+        pool.initialize(oracleAddress, pegInAddress, 500);
 
-        proxyQSATBridge = Upgrades.deployUUPSProxy(
-            "QSATBridge.sol",
-            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
-        );
+        qsatBridge = new QSATBridge();
+        qsatBridge.initialize(oracleAddress, address(pool));
 
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
-        );
+        qsat = new QSAT();
+        qsat.initialize("QSAT", "QSAT", address(qsatBridge));
 
-        proxyQSAT = Upgrades.deployUUPSProxy(
-          "QSAT.sol",
-          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
-        );
+        share = new Share();
+        share.initialize("QuarryShares", "QShare", address(pool));
 
-        pool = Pool(proxy);
-        share = Share(proxyShare);
-        qsat = QSAT(proxyQSAT);
-        qsatBridge = QSATBridge(proxyQSATBridge);
-        qsatBridge.setQSATContract(proxyQSAT);
-        pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSATBridge);
+        qsatBridge.setQSATContract(address(qsat));
+        pool.setShareContract(address(share));
+        pool.setQSATBridgeContract(address(qsatBridge));
     }
 
     function test_initialChainTip() public {
@@ -353,33 +336,21 @@ contract PoolTest is Test {
     }
 
     function test_submitMultipleBlocks() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 2))
-        );
+        pool = new Pool();
+        pool.initialize(oracleAddress, pegInAddress, 2);
 
-        proxyQSATBridge = Upgrades.deployUUPSProxy(
-            "QSATBridge.sol",
-            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
-        );
+        qsatBridge = new QSATBridge();
+        qsatBridge.initialize(oracleAddress, address(pool));
 
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
-        );
+        qsat = new QSAT();
+        qsat.initialize("QSAT", "QSAT", address(qsatBridge));
 
-        proxyQSAT = Upgrades.deployUUPSProxy(
-          "QSAT.sol",
-          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
-        );
+        share = new Share();
+        share.initialize("QuarryShares", "QShare", address(pool));
 
-        pool = Pool(proxy);
-        share = Share(proxyShare);
-        qsat = QSAT(proxyQSAT);
-        qsatBridge = QSATBridge(proxyQSATBridge);
-        qsatBridge.setQSATContract(proxyQSAT);
-        pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSATBridge);
+        qsatBridge.setQSATContract(address(qsat));
+        pool.setShareContract(address(share));
+        pool.setQSATBridgeContract(address(qsatBridge));
 
         vm.startPrank(oracleAddress);
 
@@ -464,33 +435,21 @@ contract PoolTest is Test {
     }
 
     function test_distributeRewards() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 5))
-        );
+        pool = new Pool();
+        pool.initialize(oracleAddress, pegInAddress, 5);
 
-        proxyQSATBridge = Upgrades.deployUUPSProxy(
-            "QSATBridge.sol",
-            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
-        );
+        qsatBridge = new QSATBridge();
+        qsatBridge.initialize(oracleAddress, address(pool));
 
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
-        );
+        qsat = new QSAT();
+        qsat.initialize("QSAT", "QSAT", address(qsatBridge));
 
-        proxyQSAT = Upgrades.deployUUPSProxy(
-          "QSAT.sol",
-          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
-        );
+        share = new Share();
+        share.initialize("QuarryShares", "QShare", address(pool));
 
-        pool = Pool(proxy);
-        share = Share(proxyShare);
-        qsat = QSAT(proxyQSAT);
-        qsatBridge = QSATBridge(proxyQSATBridge);
-        qsatBridge.setQSATContract(proxyQSAT);
-        pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSATBridge);
+        qsatBridge.setQSATContract(address(qsat));
+        pool.setShareContract(address(share));
+        pool.setQSATBridgeContract(address(qsatBridge));
 
         vm.startPrank(oracleAddress);
 
@@ -663,33 +622,21 @@ contract PoolTest is Test {
     }
 
     function test_distributeRewardsMultSubmissions() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 5))
-        );
+        pool = new Pool();
+        pool.initialize(oracleAddress, pegInAddress, 5);
 
-        proxyQSATBridge = Upgrades.deployUUPSProxy(
-            "QSATBridge.sol",
-            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
-        );
+        qsatBridge = new QSATBridge();
+        qsatBridge.initialize(oracleAddress, address(pool));
 
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
-        );
+        qsat = new QSAT();
+        qsat.initialize("QSAT", "QSAT", address(qsatBridge));
 
-        proxyQSAT = Upgrades.deployUUPSProxy(
-          "QSAT.sol",
-          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
-        );
+        share = new Share();
+        share.initialize("QuarryShares", "QShare", address(pool));
 
-        pool = Pool(proxy);
-        share = Share(proxyShare);
-        qsat = QSAT(proxyQSAT);
-        qsatBridge = QSATBridge(proxyQSATBridge);
-        qsatBridge.setQSATContract(proxyQSAT);
-        pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSATBridge);
+        qsatBridge.setQSATContract(address(qsat));
+        pool.setShareContract(address(share));
+        pool.setQSATBridgeContract(address(qsatBridge));
 
         vm.startPrank(oracleAddress);
 
@@ -859,33 +806,21 @@ contract PoolTest is Test {
     }
 
     function test_distributeRewardsLessThanN() public {
-        proxy = Upgrades.deployUUPSProxy(
-            "Pool.sol",
-            abi.encodeCall(Pool.initialize, (oracleAddress, pegInAddress, 10))
-        );
+        pool = new Pool();
+        pool.initialize(oracleAddress, pegInAddress, 10);
 
-        proxyQSATBridge = Upgrades.deployUUPSProxy(
-            "QSATBridge.sol",
-            abi.encodeCall(QSATBridge.initialize, (oracleAddress, proxy))
-        );
+        qsatBridge = new QSATBridge();
+        qsatBridge.initialize(oracleAddress, address(pool));
 
-        proxyShare = Upgrades.deployUUPSProxy(
-          "Share.sol",
-          abi.encodeCall(share.initialize, ("QuarryShares", "QShare", proxy))
-        );
+        qsat = new QSAT();
+        qsat.initialize("QSAT", "QSAT", address(qsatBridge));
 
-        proxyQSAT = Upgrades.deployUUPSProxy(
-          "QSAT.sol",
-          abi.encodeCall(share.initialize, ("QSAT", "QSAT", proxyQSATBridge))
-        );
+        share = new Share();
+        share.initialize("QuarryShares", "QShare", address(pool));
 
-        pool = Pool(proxy);
-        share = Share(proxyShare);
-        qsat = QSAT(proxyQSAT);
-        qsatBridge = QSATBridge(proxyQSATBridge);
-        qsatBridge.setQSATContract(proxyQSAT);
-        pool.setShareContract(proxyShare);
-        pool.setQSATBridgeContract(proxyQSATBridge);
+        qsatBridge.setQSATContract(address(qsat));
+        pool.setShareContract(address(share));
+        pool.setQSATBridgeContract(address(qsatBridge));
 
         vm.startPrank(oracleAddress);
 
