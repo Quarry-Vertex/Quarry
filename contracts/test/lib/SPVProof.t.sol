@@ -18,7 +18,19 @@ contract SPVProofTest is Test {
         instance = new ValidateSPVScript();
     }
     function test_ReturnsTrueIfProofIsValid() public {
-        ProveTest[1] memory testCases = [
+        ProveTest[2] memory testCases = [
+            ProveTest({
+                // tx hash in le (blockstream shows in be)
+                inputTxIdLE: hex"59b6781bde30207aef00cc0745e80a635e24be3c3c17a3a013c1082ac7506a80",
+                // merkle root hash in le (blockstream shows in be)
+                inputMerkleRootLE: hex"9c7864c96ba028f6fea5e24be811615822a37b3de6241fec56bedbb19ba4838c",
+                // every merkle hash in le then combined together
+                inputProof: hex"5d6c736e20b9011945431ed5caae0563df3d0897f503cad7f5ea0a6e5d28828c8f040861d599ef6708e7e997c54ebcc655925c99a8003789687eed48f3ee56a2a0952fdf53dc6adc5aedf89ed3b21042414188a001ebf94abf5b80056a2a0dc76d609c2a29a30a458f144ddd49c530610c9f12ca8db105a7a988aaa92fff3ee71c52b32ae1d9af9ebdb3913d727e713fb2ba06c010cc2d2f3d63e563f17c685207240ce5d67518954c51d8e5ed008cd1784ec5b4770847f40c3647e83e1469a9bdc8d7349de09f89c3e59f298051378159dc46a49024bcfbb31fe522828e980ec8173b006500920dad06592d8574757821466377fa89420ac02736419655def3b5455d77b1ed25bf39eb2ceb811adfac86cce86e1bc06c0ff69d2e993cfb6a9bde0b3ec82bc8425dafc2d0db9a3c1c25e951b615b68ecea804d77d6ee8dd6fcb7e7e04b4adf838dfa17f5a4e6a95584c73b01b05ff8a68c20c6fd67b05e5df530b3e29a41f38830ff77dcbcb299bda98fa33e8c42bac7ab86160774f4724f677de9de7a31f25cc972dcaaf6818f598530fddbcbcda62d9afa11f4c5c2c24decd",
+                // index from quicknode
+                inputIndex: 6,
+                // expected result
+                output: true
+            }),
             ProveTest({
                 // tx hash in le (blockstream shows in be)
                 inputTxIdLE: hex"0913912193fdc55184d022bba8f5e95b4806acdb337683c613465ad5f53f176f",
