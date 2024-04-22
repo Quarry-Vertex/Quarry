@@ -3,6 +3,7 @@ import asyncio
 import subprocess
 import json
 import os
+import shutil
 
 PIPE = asyncio.subprocess.PIPE
 
@@ -256,7 +257,48 @@ async def run_stratum():
     print("sv2proxy-service running")
 
 
-async def run(restart_service, list_services, kill_services, log_service):
+def copy_quarry_bindings():
+    # Get the directory where the script is running
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Define the source directory to copy (quarry-sdk)
+    source_dir = os.path.join(script_dir, "quarry-sdk")
+
+    # Define the target directory (parent directory's "stratum" folder)
+    parent_dir = os.path.dirname(script_dir)
+    target_dir = os.path.join(parent_dir, "stratum")
+
+    # Ensure the target directory exists, if not, create it
+    if not os.path.exists(target_dir):
+        print("stratum directory not found")
+        return
+
+    # Define the final destination path
+    final_target = os.path.join(target_dir, "quarry-sdk")
+    # If the destination directory already exists, remove it
+    if os.path.exists(final_target):
+        shutil.rmtree(final_target)
+        print(f"Previous bindings removed: {final_target}")
+
+    # Copy the directory
+    shutil.copytree(source_dir, final_target)
+    print(f"Directory copied from {source_dir} to {final_target}")
+
+
+async def run(
+    restart_service,
+    list_services,
+    kill_services,
+    log_service,
+    run_all,
+    contract,
+    oracle,
+    stratum,
+    copy_bindings,
+):
+    if copy_bindings:
+        copy_quarry_bindings()
+        return
     if log_service:
         print(f"Logging {log_service}")
         await display_pm2_logs(log_service)
@@ -279,10 +321,13 @@ async def run(restart_service, list_services, kill_services, log_service):
         else:
             print(f"Unknown service: {restart_service}")
         return
-    await run_local_evm()
-    await deploy_contracts()
-    await run_oracle()
-    await run_stratum()
+    if contract or run_all:
+        await run_local_evm()
+        await deploy_contracts()
+    if oracle or run_all:
+        await run_oracle()
+    if stratum or run_all:
+        await run_stratum()
 
 
 @click.command()
@@ -307,14 +352,49 @@ async def run(restart_service, list_services, kill_services, log_service):
     help="Kill running services.",
 )
 @click.option(
-    '--log',
-    'log_service',
+    "--log",
+    "log_service",
     default=None,
-    help='Name of the PM2 service whose logs you want to display.',
+    help="Name of the PM2 service whose logs you want to display.",
 )
-def main(restart_service, list_services, kill_services, log_service):
+@click.option(
+    "--stratum", "-s", "stratum", is_flag=True, help="Run Stratum Mining Pool"
+)
+@click.option(
+    "--contract", "-c", "contract", is_flag=True, help="Run and Deploy Contract"
+)
+@click.option("--oracle", "-o", "oracle", is_flag=True, help="Run Oracle")
+@click.option("--all", "-a", "run_all", is_flag=True, help="Run every service")
+@click.option(
+    "--copy-bindings",
+    "-cb",
+    "copy_bindings",
+    is_flag=True,
+    help="Copy quarry-sdk to Stratum Dir",
+)
+def main(
+    restart_service,
+    list_services,
+    kill_services,
+    log_service,
+    run_all,
+    contract,
+    stratum,
+    oracle,
+    copy_bindings,
+):
     asyncio.run(
-        run(restart_service, list_services, kill_services, log_service)
+        run(
+            restart_service,
+            list_services,
+            kill_services,
+            log_service,
+            run_all,
+            contract,
+            oracle,
+            stratum,
+            copy_bindings,
+        )
     )
 
 

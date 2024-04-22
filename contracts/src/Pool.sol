@@ -8,6 +8,7 @@ import "./lib/SPVProof.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ValidateSPVScript} from "bitcoin-spv/script/ValidateSPV.s.sol";
 
 import "forge-std/console.sol";
 
@@ -126,6 +127,11 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
         sharesId = 0;
     }
+    function validCoinbaseTx(bytes32 tx_hash, bytes32 merkle, bytes memory proof) public returns (bool valid) {
+        ValidateSPVScript instance = new ValidateSPVScript();
+        return instance.prove(tx_hash, merkle, proof, 0);
+    }
+
 
     function setChainTip(BitcoinBlock memory _chainTip) public onlyOracle {
         if (chainTip.header.blockHash != "") {

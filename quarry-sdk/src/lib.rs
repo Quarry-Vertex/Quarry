@@ -35,8 +35,8 @@ impl Deployment {
     fn path(env: &Env) -> String {
         let d = current_dir().unwrap();
         let mut d = d.as_path();
-        // get parent until we get to folder "Quarry"
-        while d.file_name().unwrap() != "Quarry" {
+        // get parent until we get to folder "Quarry" or "stratum"
+        while d.file_name().unwrap() != "stratum" && d.file_name().unwrap() != "Quarry" {
             d = d.parent().unwrap();
         }
         let quarry = d.to_string_lossy().to_string();
