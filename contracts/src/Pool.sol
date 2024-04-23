@@ -12,21 +12,6 @@ import {ValidateSPVScript} from "bitcoin-spv/script/ValidateSPV.s.sol";
 
 import "forge-std/console.sol";
 
-/*
-General Design Diagram:
-
-                    (submits blocks)                  (submits btc data)
-Stratum Mining Pool     -->             SharesPool          <--             Blockchain Data Oracle/Service
-
-                                            ^
-                                            |  (redeem shares)
-                                            |
-                (request peg out)
-        Miners       --->            Bridge Contract // this would need a btc address that can receive/send native BTC,
-                                                     // potentially same wallet as the one that receives mining rewards?
-
-*/
-
 contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     /*
         Difficulty Threshold Calculation:
@@ -62,6 +47,8 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
     mapping(bytes32 => address) public commits; // tracks the address that has committed a block hash
 
     mapping(bytes32 => bool) public usedBlockHashes; // tracks whether a block hash has already been used
+
+    ValidateSPVScript public spvValidator = new ValidateSPVScript();
 
     BitcoinBlock public chainTip;
 
@@ -128,8 +115,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         sharesId = 0;
     }
     function validCoinbaseTx(bytes32 tx_hash, bytes32 merkle, bytes memory proof) public returns (bool valid) {
-        ValidateSPVScript instance = new ValidateSPVScript();
-        return instance.prove(tx_hash, merkle, proof, 0);
+        return spvValidator.prove(tx_hash, merkle, proof, 0);
     }
 
 
@@ -190,7 +176,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         * The previous block hash (written in the current block's block header) is the Bitcoin chain tip for the fork with the most accumulated PoW
         * A merkle proof (ie SPV proof) that the Coinbase transaction of the block is pointed to the current peg in address
     */
-    function submitBlock(BitcoinBlock memory _block, bytes32[] memory _merklePath, address _account) public returns (bool success) {
+    function submitBlock(BitcoinBlock memory _block, bytes32 _txHash, bytes memory _proof, address _account) public returns (bool success) {
         bytes32 blockHash = _block.header.blockHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
@@ -216,7 +202,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
             "Coinbase transaction does not point to quarry peg in address");
 
         // SPV Proof TODO: Confirm this logic is correct
-        spvProof(_merklePath, _block.header.merkleRootHash);
+        spvValidator.prove(_txHash, _block.header.merkleRootHash, _proof, 0);
 
         usedBlockHashes[blockHash] = true;
 
