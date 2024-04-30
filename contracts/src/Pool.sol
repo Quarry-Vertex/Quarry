@@ -221,7 +221,9 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         return true;
     }
 
-    // Clears out all shares and distributes rewards prorata to addresses
+    /// Clears out all shares and distributes rewards prorata to addresses
+    /// @param _blockHash the hash to destribute rewards to
+    /// @returns status of distribution
     function distributeRewards(bytes32 _blockHash) public returns (bool success) {
         require(blocks[_blockHash].outputAddress == quarryPegInAddress, "Block's output address does not match quarry peg in address");
         require(confirmations[_blockHash] >= 6, "Block does not have 6+ confirmations");
