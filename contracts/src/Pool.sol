@@ -202,7 +202,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
             "Coinbase transaction does not point to quarry peg in address");
 
         // SPV Proof TODO: Confirm this logic is correct
-        spvValidator.prove(_txHash, _block.header.merkleRootHash, _proof, 0);
+        require(spvValidator.prove(_txHash, _block.header.merkleRootHash, _proof, 0), "SPV proof failed");
 
         usedBlockHashes[blockHash] = true;
 
@@ -223,7 +223,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
 
     /// Clears out all shares and distributes rewards prorata to addresses
     /// @param _blockHash the hash to destribute rewards to
-    /// @returns status of distribution
+    /// @return success of distribution
     function distributeRewards(bytes32 _blockHash) public returns (bool success) {
         require(blocks[_blockHash].outputAddress == quarryPegInAddress, "Block's output address does not match quarry peg in address");
         require(confirmations[_blockHash] >= 6, "Block does not have 6+ confirmations");

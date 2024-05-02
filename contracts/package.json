@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@nomicfoundation/solidity-language-server": "^0.8.2",
     "@openzeppelin/contracts": "^5.0.2"
   }
 }
