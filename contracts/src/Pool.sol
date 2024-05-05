@@ -180,7 +180,7 @@ contract Pool is Initializable, OwnableUpgradeable, SPVProof, RingBuffer {
         bytes32 blockHash = _block.header.blockHash;
         // Address must match the one that has been committed and block hash has not been submitted to pool before
         require(
-            commits[blockHash] != _account,
+            commits[blockHash] == _account,
             "Address doesn't match account"
         );
 
