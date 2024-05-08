@@ -76,6 +76,15 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
         .unwrap()
         .unwrap();
 
+    pool.set_share_contract(
+        share.address()
+    )
+    .send()
+    .await?
+    .await
+    .unwrap()
+    .unwrap();
+
     println!("QSAT: {:?}", qsat.address());
     println!("Pool: {:?}", pool.address());
     println!("Share: {:?}", share.address());

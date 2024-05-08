@@ -30,7 +30,7 @@ contract QSATBridgeTest is Test {
         qsatBridge.setQSATContract(address(qsat));
     }
 
-    function test_bridgeInitialSupply() public view {
+    function test_bridgeInitialSupply() public {
         assertEq(qsat.balanceOf(address(qsatBridge)), 21000000 * 100000000, "Expected 21000000 * 100000000 qsat to be initial supply");
     }
 

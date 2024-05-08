@@ -5,7 +5,7 @@
   "qsat_bridge": "0x0000000000000000000000000000000000000000",
   "pool": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
   "share": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-  "peg_in_address": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "peg_in_address": "0x210372c47307e5b75ce365daf835f226d246c5a7a92fe24395018d5552123354",
   "ring_buffer_size": 10000,
   "eth_rpc_url": "http://localhost:8545",
   "btc_rpc_url": "https://billowing-fittest-feather.btc-testnet.quiknode.pro/4613ae0ad4238d1261f99cc2cd8baa48f6b96d83/"
