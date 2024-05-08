@@ -102,7 +102,7 @@ contract PoolTest is Test {
             "Address for hash 0x0000000000000000000e3c2f6c0483de8bd2aefb4d3b5f9846ab8e21fb19bc7 should be testAddress");
     }
 
-    function test_calculateDifficulty() public view {
+    function test_calculateDifficulty() public {
         uint32 bits = 0x1b0404cb;
         uint256 difficulty = pool._calculateDifficulty(bits);
         uint256 expectedDifficulty = 163074209349632;
@@ -153,6 +153,7 @@ contract PoolTest is Test {
         // create address
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
 
+        pool.submitHash(curBlock.header.blockHash, account);
         assertTrue(pool.submitBlock(curBlock, txHash, proof, account), "Block was not successfully submitted");
         assertEq(share.ownerOf(0), account, "Owner share id 0 should be 0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
     }
@@ -199,6 +200,7 @@ contract PoolTest is Test {
 
         // create address
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+        pool.submitHash(curBlock.header.blockHash, account);
 
         vm.expectRevert("SPV proof failed");
         pool.submitBlock(curBlock, txHash, proof, account);
@@ -246,6 +248,8 @@ contract PoolTest is Test {
 
         // create address
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+        pool.submitHash(curBlock.header.blockHash, account);
+
         vm.expectRevert("Submitted block is stale");
         pool.submitBlock(curBlock, txHash, proof, account);
     }
@@ -293,6 +297,7 @@ contract PoolTest is Test {
 
         // create address
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+        pool.submitHash(curBlock.header.blockHash, account);
 
         vm.expectRevert("Coinbase transaction does not point to quarry peg in address");
         pool.submitBlock(curBlock, txHash, proof, account);
@@ -339,6 +344,7 @@ contract PoolTest is Test {
         // create address
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
         address account2 = address(bytes20(keccak256(abi.encode(block.timestamp + 400))));
+        pool.submitHash(block1.header.blockHash, account);
 
         pool.submitBlock(block1, txHash, proof, account);
         createAndSetChainTip(blockHash, rootTip, txHash, bits, outputAddress, blockReward);
@@ -357,6 +363,8 @@ contract PoolTest is Test {
             outputAddress,  // outputAddress
             blockReward     // blockReward
         );
+
+        pool.submitHash(block2.header.blockHash, account2);
 
         createAndSetChainTip(blockHash, blockHash, tx2, bits, outputAddress, blockReward);
         vm.expectRevert("Block hash has already been submitted");
@@ -422,6 +430,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block1.header.blockHash, account1);
         pool.submitBlock(block1, tx1, proof1, account1);
         createAndSetChainTip(blockHash1, rootTip, tx1, bits, outputAddress, blockReward);
 
@@ -440,6 +449,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block2.header.blockHash, account2);
         assertTrue(pool.submitBlock(block2, tx2, proof2, account2), "Block 2 was not successfully submitted");
         createAndSetChainTip(blockHash2, blockHash1, tx2, bits, outputAddress, blockReward);
 
@@ -458,6 +468,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block3.header.blockHash, account3);
         assertTrue(pool.submitBlock(block3, tx3, proof3, account3), "Block 3 was not successfully submitted");
         createAndSetChainTip(blockHash3, blockHash2, tx3, bits, outputAddress, blockReward);
 
@@ -531,6 +542,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block1.header.blockHash, account1);
         pool.submitBlock(block1, tx1, proof1, account1);
         createAndSetChainTip(blockHash1, rootTip, tx1, bits, outputAddress, blockReward);
 
@@ -549,6 +561,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block2.header.blockHash, account2);
         assertTrue(pool.submitBlock(block2, tx2, proof2, account2), "Block 2 was not successfully submitted");
         createAndSetChainTip(blockHash2, blockHash1, tx2, bits, outputAddress, blockReward);
 
@@ -567,6 +580,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block3.header.blockHash, account3);
         pool.submitBlock(block3, tx3, proof3, account3);
         createAndSetChainTip(blockHash3, blockHash2, tx3, bits, outputAddress, blockReward);
 
@@ -585,6 +599,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block4.header.blockHash, account4);
         pool.submitBlock(block4, tx4, proof4, account4);
         createAndSetChainTip(blockHash4, blockHash3, tx4, bits, outputAddress, blockReward);
 
@@ -603,6 +618,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block5.header.blockHash, account5);
         pool.submitBlock(block5, tx5, proof5, account5);
         createAndSetChainTip(blockHash5, blockHash4, tx5, bits, outputAddress, blockReward);
 
@@ -621,6 +637,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block6.header.blockHash, account6);
         pool.submitBlock(block6, tx6, proof6, account6);
         createAndSetChainTip(blockHash6, blockHash5, tx3, bits, outputAddress, blockReward);
 
@@ -639,6 +656,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block7.header.blockHash, account7);
         pool.submitBlock(block7, tx7, proof7, account7);
         createAndSetChainTip(blockHash7, blockHash6, tx7, bits, outputAddress, blockReward);
         vm.stopPrank();
@@ -727,6 +745,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block1.header.blockHash, account1);
         pool.submitBlock(block1, tx1, proof1, account1);
         createAndSetChainTip(blockHash1, rootTip, tx1, bits, outputAddress, blockReward);
 
@@ -745,6 +764,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block2.header.blockHash, account2);
         assertTrue(pool.submitBlock(block2, tx2, proof2, account2), "Block 2 was not successfully submitted");
         createAndSetChainTip(blockHash2, blockHash1, tx2, bits, outputAddress, blockReward);
 
@@ -763,6 +783,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block3.header.blockHash, account3);
         pool.submitBlock(block3, tx3, proof3, account3);
         createAndSetChainTip(blockHash3, blockHash2, tx3, bits, outputAddress, blockReward);
 
@@ -781,6 +802,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block4.header.blockHash, account4);
         pool.submitBlock(block4, tx4, proof4, account4);
         createAndSetChainTip(blockHash4, blockHash3, tx4, bits, outputAddress, blockReward);
 
@@ -799,6 +821,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block5.header.blockHash, account5);
         pool.submitBlock(block5, tx5, proof5, account5);
         createAndSetChainTip(blockHash5, blockHash4, tx5, bits, outputAddress, blockReward);
 
@@ -817,6 +840,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block6.header.blockHash, account6);
         pool.submitBlock(block6, tx6, proof6, account6);
         createAndSetChainTip(blockHash6, blockHash5, tx3, bits, outputAddress, blockReward);
 
@@ -835,6 +859,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block7.header.blockHash, account3);
         pool.submitBlock(block7, tx7, proof7, account3);
         createAndSetChainTip(blockHash7, blockHash6, tx7, bits, outputAddress, blockReward);
         vm.stopPrank();
@@ -923,6 +948,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block1.header.blockHash, account1);
         pool.submitBlock(block1, tx1, proof1, account1);
         createAndSetChainTip(blockHash1, rootTip, tx1, bits, outputAddress, blockReward);
 
@@ -941,6 +967,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block2.header.blockHash, account2);
         assertTrue(pool.submitBlock(block2, tx2, proof2, account2), "Block 2 was not successfully submitted");
         createAndSetChainTip(blockHash2, blockHash1, tx2, bits, outputAddress, blockReward);
 
@@ -959,6 +986,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block3.header.blockHash, account3);
         pool.submitBlock(block3, tx3, proof3, account3);
         createAndSetChainTip(blockHash3, blockHash2, tx3, bits, outputAddress, blockReward);
 
@@ -977,6 +1005,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block4.header.blockHash, account4);
         pool.submitBlock(block4, tx4, proof4, account4);
         createAndSetChainTip(blockHash4, blockHash3, tx4, bits, outputAddress, blockReward);
 
@@ -995,6 +1024,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block5.header.blockHash, account5);
         pool.submitBlock(block5, tx5, proof5, account5);
         createAndSetChainTip(blockHash5, blockHash4, tx5, bits, outputAddress, blockReward);
 
@@ -1013,6 +1043,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block6.header.blockHash, account6);
         pool.submitBlock(block6, tx6, proof6, account6);
         createAndSetChainTip(blockHash6, blockHash5, tx3, bits, outputAddress, blockReward);
 
@@ -1031,6 +1062,7 @@ contract PoolTest is Test {
             blockReward     // blockReward
         );
 
+        pool.submitHash(block7.header.blockHash, account7);
         pool.submitBlock(block7, tx7, proof7, account7);
         createAndSetChainTip(blockHash7, blockHash6, tx7, bits, outputAddress, blockReward);
         vm.stopPrank();
@@ -1098,11 +1130,11 @@ contract PoolTest is Test {
         address account = (0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
 
         bytes32 incorrectAddress = bytes32(0x1434567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        pool.submitHash(blockHash, account);
         pool.submitBlock(block1, txHash, proof, account);
         createAndSetChainTip(blockHash, rootTip, txHash, bits, incorrectAddress, blockReward);
         vm.expectRevert("Block's output address does not match quarry peg in address");
         pool.distributeRewards(block1.header.blockHash);
         vm.startPrank(oracleAddress);
-
     }
 }
