@@ -37,6 +37,10 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
         .unwrap()
         .send()
         .await?;
+    let qsat_bridge = bindings::qsat_bridge::QSATBridge::deploy(Arc::clone(&provider), ())
+        .unwrap()
+        .send()
+        .await?;
     let pool = bindings::pool::Pool::deploy(Arc::clone(&provider), ())
         .unwrap()
         .send()
@@ -52,6 +56,16 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
         .await
         .unwrap()
         .unwrap();
+
+    qsat_bridge.initialize(
+        oracle_wallet.address(),
+        pool.address(),
+    )
+    .send()
+    .await?
+    .await
+    .unwrap()
+    .unwrap();
 
     pool.initialize(
         oracle_wallet.address(),
@@ -76,6 +90,15 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
         .unwrap()
         .unwrap();
 
+    qsat_bridge.set_qsat_contract(
+        qsat.address()
+    )
+    .send()
+    .await?
+    .await
+    .unwrap()
+    .unwrap();
+
     pool.set_share_contract(
         share.address()
     )
@@ -85,11 +108,22 @@ pub async fn deploy_contracts(env: Env, write_deployment: bool) -> Result<()> {
     .unwrap()
     .unwrap();
 
+    pool.set_qsat_bridge_contract(
+        qsat_bridge.address()
+    )
+    .send()
+    .await?
+    .await
+    .unwrap()
+    .unwrap();
+
     println!("QSAT: {:?}", qsat.address());
+    println!("QSAT Bridge: {:?}", qsat_bridge.address());
     println!("Pool: {:?}", pool.address());
     println!("Share: {:?}", share.address());
 
     deployment.qsat = qsat.address();
+    deployment.qsat_bridge = qsat_bridge.address();
     deployment.pool = pool.address();
     deployment.share = share.address();
 
