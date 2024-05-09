@@ -132,7 +132,7 @@ async def run_local_evm() -> None:
     print(f"local-evm running")
 
 
-async def deploy_contracts():
+async def deploy_contracts() -> None:
     proc = await asyncio.create_subprocess_exec(
         "cargo",
         "run",
@@ -141,7 +141,7 @@ async def deploy_contracts():
     await proc.wait()
 
 
-async def run_oracle():
+async def run_oracle() -> None:
     """
     Run the rust oracle which sets chain tips on the smart contract
     the cwd is the oracle directory and logs are stored in 'oracle/oracle.log'
@@ -168,7 +168,7 @@ async def run_oracle():
     print(f"oracle-service running")
 
 
-async def run_stratum():
+async def run_stratum() -> None:
     """
     Run the SV2 Pool
     cd roles/pool/config-examples
@@ -257,7 +257,36 @@ async def run_stratum():
     print("sv2proxy-service running")
 
 
-def copy_quarry_bindings():
+def generate_quarry_bindings() -> None:
+    """
+    Regenerate bindings for Quarry contracts located in ./contracts/
+    This will populate quarry-sdk/ with rust bindings for SC interopt
+    """
+    print("Regenerating Bindings for Quarry Contracts")
+
+    # Define the command and arguments in a list
+    command = [
+        "cargo",
+        "test",
+        "--package",
+        "quarry-sdk",
+        "--lib",
+        "tests::regen_bindings",
+        "--",
+        "--exact",
+    ]
+
+    # Run the command
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    # Check if the command was successful
+    if result.returncode == 0:
+        print(result.stdout)
+    else:
+        print(result.stderr)
+
+
+def copy_quarry_bindings() -> None:
     # Get the directory where the script is running
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -294,8 +323,12 @@ async def run(
     contract,
     oracle,
     stratum,
+    generate_bindings,
     copy_bindings,
 ):
+    if generate_bindings:
+        generate_quarry_bindings()
+        return
     if copy_bindings:
         copy_quarry_bindings()
         return
@@ -366,6 +399,13 @@ async def run(
 @click.option("--oracle", "-o", "oracle", is_flag=True, help="Run Oracle")
 @click.option("--all", "-a", "run_all", is_flag=True, help="Run every service")
 @click.option(
+    "--generate-bindings",
+    "-gb",
+    "generate_bindings",
+    is_flag=True,
+    help="Generate Quarry contract rust bindings",
+)
+@click.option(
     "--copy-bindings",
     "-cb",
     "copy_bindings",
@@ -381,6 +421,7 @@ def main(
     contract,
     stratum,
     oracle,
+    generate_bindings,
     copy_bindings,
 ):
     asyncio.run(
@@ -393,6 +434,7 @@ def main(
             contract,
             oracle,
             stratum,
+            generate_bindings,
             copy_bindings,
         )
     )
